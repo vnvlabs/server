@@ -22,7 +22,7 @@ def configure_error_handlers(app):
 def create_serve_app(config):
     import app.serve
 
-    app = Flask(__name__, static_folder="static")
+    app = Flask(__name__, static_url_path='/flask_static', static_folder="static")
     app.config.from_object(config)
     socketio = SocketIO(app)
     serve.register(socketio, app, config)
