@@ -1,0 +1,22 @@
+{
+
+  "reports" : {
+
+  },
+  "executables" : {
+
+  },
+  "plugins" : {
+
+  },
+  "branding" : {
+        "logo" : {
+                "large" : "/images/logo.png"
+        },
+        "copyright" : {
+               "message" : "RNET 2022",
+               "link" : "mailto:brsdasdnet-tech.com"
+        }
+  }
+}
+
