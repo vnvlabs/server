@@ -5,5 +5,7 @@
 	"DEFAULT_USERS" : {
 		"Admin" : {"password" : "Admin" , "admin" : true},
 		"User" : {"password" : "User" , "admin" : false}
-	}
+	},
+        "LOGO" : "docker/images/logo.png"
 }
+
