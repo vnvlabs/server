@@ -1,0 +1,9 @@
+{
+	"port" : 5001,
+	"DEBUG" : false,
+	"DOCKER_IMAGE" : "vnv_serve",
+	"DEFAULT_USERS" : {
+		"Admin" : {"password" : "Admin" , "admin" : true},
+		"User" : {"password" : "User" , "admin" : false}
+	}
+}

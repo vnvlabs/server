@@ -1,5 +1,6 @@
 # -*- encoding: utf-8 -*-
 import uuid
+from os import abort
 
 import requests
 import websocket
@@ -19,24 +20,47 @@ blueprint = Blueprint(
     template_folder='templates'
 )
 
+def init_users():
+  if len(users) == 0:
+    adminCount = 0
+    try:
+        for k,v in current_app.config["DEFAULT_USERS"].items():
+            createUser(k, generate_password_hash(v["password"]), v.get("admin", False))
+            if v.get("admin", False):
+                adminCount += 1
+    except:
+        print("USER CONFIGURATION ERROR -- CHECK YOUR DEFAULT USERS AND TRY AGAIN")
+        abort()
+    if len(users) == 0:
+        print("NO DEFAULT USER FOUND -- CHECK YOUR DEFAULT USERS AND TRY AGAIN")
+        abort()
+    if adminCount == 0:
+        print("NO ADMIN USERS FOUND -- You wont be able to configure users ")
+
 users = {
-    "Ben": {
-        "Password": generate_password_hash("Ben"),
-        "Admin": True
-    },
-    "Jerry": {
-        "Password": generate_password_hash("Jerry")
-    }
 }
 
+def getUser(username):
+    init_users()
+    return users.get(username,None)
 
+def createUser(username, passw, admin=False):
+    users[username] = { "Password" : passw, "Admin" : admin } 
+
+def userExists(username):
+    init_users()
+    return username in users
 
 
 def GET_COOKIE_TOKEN(username):
-    cook = users[username].get("Cookie")
+    
+    if not userExists(username):
+        return None
+
+    cook = getUser(username).get("Cookie")
     if cook is None:
         uid = uuid.uuid4().hex
-        users[username]["Cookie"] = uid
+        getUser(username)["Cookie"] = uid
         return username + ":" + uid
     else:
         return username + ":" + cook
@@ -47,7 +71,11 @@ def verify_cookie(cook):
     try:
         if cook is not None:
             s = cook.split(":")
-            if s[0] in users and users[s[0]]["Cookie"] == s[1]:
+           
+            u = getUser(s[0])
+            if u is None:
+                return False
+            elif u["Cookie"] == s[1]:
                 g.user = s[0]
                 return True
         return False
@@ -63,22 +91,21 @@ def check_valid_login():
 
 @blueprint.route("/admin")
 def admin_panel():
-    if users[g.user]["Admin"]:
+    if getUser(g.user)["Admin"]:
         return render_template("admin.html", users=users, error="")
 
 
 @blueprint.route("/admin/new_or_reset", methods=["POST"])
 def new_user_or_reset_password():
-    if users[g.user]["Admin"]:
+    if getUser(g.user)["Admin"]:
         uname = request.form["username"]
         passw = request.form["password"]
-
-        if uname in users:
-            users[uname]["Password"] = generate_password_hash(passw)
+        
+        if userExists(uname):
+            u = getUser(uname)
+            u["Password"] = generate_password_hash(passw)
         else:
-            users[uname] = {
-                "Password": generate_password_hash(passw)
-            }
+            createUser(uname, generate_password_hash(passw))
 
         return make_response(redirect("/admin"), 302)
 
@@ -102,8 +129,8 @@ def login():
         return proxy("login")
 
     uname = request.form.get("username")
-
-    if check_password_hash(users[uname]["Password"], request.form.get("password")):
+    
+    if userExists(uname) and  check_password_hash(getUser(uname)["Password"], request.form.get("password")):
         launch_docker_container(uname, request.form.get("password"), current_app.config["DOCKER_IMAGE"])
         response = make_response(redirect("/"))
         response.set_cookie('vnv-docker-login', GET_COOKIE_TOKEN(uname))
@@ -117,7 +144,7 @@ def logout():
     # We do not proxy logout requests -- We just log the user out and stop
     # there container. This is nice as it means the logout button in the container
     # works (make sure?)
-    users[g.user].pop("Cookie")
+    getUser(g.user).pop("Cookie")
     stop_docker_container()
     response = make_response(redirect("/"))
     response.set_cookie('vnv-docker-login', "", expires=0)
@@ -168,8 +195,6 @@ def proxy(path):
 
 def register(socketio, apps, config):
         
-    global FLASK_CONFIG
-    FLASK_CONFIG = config
 
     apps.register_blueprint(blueprint)
 
