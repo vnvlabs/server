@@ -8,12 +8,6 @@
   },
   "plugins" : {
 
-  },
-  "branding" : {
-        "copyright" : {
-               "message" : "RNET Technologies 2022",
-               "link" : "mailto:boneill@rnet-tech.com"
-        }
   }
 }
 
