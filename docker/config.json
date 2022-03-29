@@ -10,12 +10,9 @@
 
   },
   "branding" : {
-        "logo" : {
-                "large" : "/images/logo.png"
-        },
         "copyright" : {
-               "message" : "RNET 2022",
-               "link" : "mailto:brsdasdnet-tech.com"
+               "message" : "RNET Technologies 2022",
+               "link" : "mailto:boneill@rnet-tech.com"
         }
   }
 }
