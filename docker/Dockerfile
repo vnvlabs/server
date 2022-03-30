@@ -7,11 +7,10 @@ RUN echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu bionic/mo
 RUN apt-get update && apt-get install -y mongodb-server
 
 
-COPY ./config.json ./config.json
+COPY config /serve-config
 COPY ./launch.sh ./launch.sh
-COPY ./images /images
 
 
 #Tell VNV About our configuration file by appending it to the environment.
-ENV VNV_DEFAULT_REPORTS=${VNV_DEFAULT_REPORTS}:/config.json
+ENV VNV_CONFIG=${VNV_CONFIG}:/serve-config/.vnv-config.json
 

@@ -6,6 +6,7 @@
 		"Admin" : {"password" : "Admin" , "admin" : true},
 		"User" : {"password" : "User" , "admin" : false}
 	},
-        "LOGO" : "docker/images/logo.png"
-}
+        "LOGO" : "docker/config/images/logo.png",
+	"ICON" : "docker/config/images/favicon.ico"
+}	
 
