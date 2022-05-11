@@ -1,4 +1,22 @@
 {
+  "reports" : {
+
+  },
+  "executables" : {
+  },
+  "plugins" : {
+
+  },
+  "logo" : {
+     "small" : "./static/logo.png",
+     "icon" : "./static/favicon.ico"
+  },
+  "copyright" : { 
+      "message" : "VnV Hub 2022",
+      "link" : "https://rnet-tech.com"
+  },
+  "intro": "./intro.html",
+  "static": "./static"
 }
 
 

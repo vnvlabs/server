@@ -1,0 +1,46 @@
+{% extends "base-fullscreen.html" %}
+
+{% block title %} VnV - Create Account {% endblock %}
+
+{% block content %}
+
+	<!-- [ auth-signin ] start -->
+	<div class="auth-wrapper">
+		<div class="auth-content">
+			<div class="card">
+				<div class="row align-items-center text-center">
+					<div class="col-md-12">
+						<div class="card-body">
+
+							<img src="/flask_static/assets/images/logo-dark.png" alt="" class="img-fluid mb-4">
+							<h4 class="mb-3 f-w-400">
+                               	{% if error %}
+									{{error}}
+								{%else%}
+                            	{%endif%}
+							</h4>
+                            <form action="/newAccount" method="post">
+                                <div class="form-group">
+                                     <input name="username" type="text" class="form-control" id="vnv-username" placeholder="Choose a unique username" value="">
+                                </div>
+
+								<div class="form-group">
+                                     <input name="password" type="password" class="form-control" id="vnv-pass" placeholder="Choose a strong password" value="">
+                                </div>
+								<div class="form-group">
+                                     <input name="auth" type="text" class="form-control" id="vnv-auth" placeholder="Enter the Authorization Code" value="">
+                                </div>
+
+                                <button type="submit" style="width:100%" class="btn btn-primary">Create Account</button>
+                            </form>
+
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<!-- [ auth-signin ] end -->
+
+{% endblock content %}
+

@@ -2,3 +2,6 @@ Flask~=2.0.0
 flask-socketio~=5.1.1
 docker
 python-socketio[Client]
+flask-sock
+websocket-client
+asyncio

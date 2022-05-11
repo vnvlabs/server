@@ -10,17 +10,18 @@
 			<div class="card">
 				<div class="row align-items-center text-center">
 					<div class="col-md-12">
-						<div class="card-body">
+						<div class="card-body" style="padding-bottom:0">
 
 							<img src="/flask_static/assets/images/logo-dark.png" alt="" class="img-fluid mb-4">
-							<h4 class="mb-3 f-w-400">
-                               	{% if error %}
-									Invalid Password -- Please try again.
-								{%else%}
-                                	Please Login to Continue
-                            	{%endif%}
-							</h4>
-                            <form action="/login" method="post">
+							<form action="/login" method="post" id="loginform">
+                            	<h4 class="mb-3 f-w-400">
+                               		{% if loginerror %}
+										{{loginerror}}
+									{%else%}
+
+									{%endif%}
+								</h4>
+
                                 <div class="form-group">
                                      <input name="username" type="text" class="form-control" id="vnv-username" placeholder="Enter your username" value="">
                                 </div>
@@ -30,14 +31,60 @@
                                 </div>
 								<input type="text" hidden readonly name="next" value="{{next}}">
                                 <button type="submit" style="width:100%" class="btn btn-primary">Login</button>
-                            </form>
 
+								<div class="form-group"style="margin-top:30px; margin-bottom:0px; display:flex; justify-content:space-between">
+									<a href="#" onclick="toggleNewAccount(true)"> Need an account? </a>
+									<a href="mailto:boneill@rnet-tech.com?subject=Help!, I Forgot My Password" > Forgot Password? </a>
+
+								</div>
+
+								<div class="form-group"style="margin-top:30px; margin-bottom:0px;">
+								</div>
+
+							</form>
+
+							<form action="/login" method="post" id="newform">
+                            	<h4 class="mb-3 f-w-400">
+                               		{% if newerror %}
+										{{newerror}}
+									{%else%}
+                                		Create A New Account!
+									{%endif%}
+								</h4>
+
+                                <div class="form-group">
+                                     <input name="username" type="text" class="form-control" id="vnv-ausername" placeholder="Enter your username" value="">
+                                </div>
+
+								<div class="form-group">
+                                     <input name="password" type="password" class="form-control" id="vnv-apass" placeholder="Enter the Password" value="">
+                                </div>
+								<div class="form-group">
+                                     <input name="auth" type="text" class="form-control" id="vnv-aauth" placeholder="Enter your Authorization Code" value="">
+                                </div>
+
+								<input type="text" hidden readonly name="next" value="{{next}}">
+                                <button type="submit" style="width:100%" class="btn btn-primary">Create Account</button>
+
+								<div class="form-group" style="margin-top:30px; margin-bottom:0px;">
+									<a href="#" onclick="toggleNewAccount(false)"> Already have an account? </a>
+								</div>
+
+							</form>
 						</div>
 					</div>
 				</div>
 			</div>
 		</div>
 	</div>
+
+	<script>
+		function toggleNewAccount(sh) {
+			$('#loginform').toggle(sh==0)
+			$('#newform').toggle(sh!=0)
+		}
+		toggleNewAccount({{newuser}})
+	</script>
 	<!-- [ auth-signin ] end -->
 
 {% endblock content %}
