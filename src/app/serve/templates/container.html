@@ -1,0 +1,181 @@
+
+{% extends "base-fullscreen.html" %}
+
+{% block title %} VnV - Container Management {% endblock %}
+
+{% block content %}
+
+<div style="position:absolute; top:20px; right:20px; ">
+    <button onclick="add_money();" class="btn btn-primary" style="margin-left:10px;">Fund Account</button>
+    <button onclick="refresh_containers()" class="btn btn-primary" style="margin-left:10px;">Refresh</button>
+    <button onclick="hard_logout();" class="btn btn-primary" style="margin-left:10px;">Logout from {{g.user}}</button>
+</div>
+
+<div id="container-content" class="card" style="width:80vw; height:80vh; padding:50px;">
+    {%include "container_content.html" %}
+</div>
+
+
+
+<script>
+
+function add_money() {
+    $.post("/container/fund/1000", function(data) {
+        alert("Added $10 to your account");
+        $('#account_bal').html(parseFloat(data)/100)
+    })
+}
+
+
+function refresh_containers() {
+    $.get("/container/refresh", function(data) {
+        $("#container-content").html(data)
+    });
+}
+
+function delete_container(id) {
+    $.post("/container/delete/" + id, function(data) {
+        $("#container-content").html(data)
+    });
+}
+
+function stop_container(id) {
+    $.post("/container/stop/" + id, function(data) {
+        $("#container-content").html(data)
+    });
+}
+
+function start_container(id) {
+    $.post("/container/start/" + id, function(data) {
+        $("#container-content").html(data)
+    });
+}
+
+function snapshot_container(id) {
+    $('#nsnap').val(id);
+    $('#new_snapshot_modal').modal('show');
+}
+
+function delete_snapshot(id) {
+    $.post("/container/delete_image/" + id, function(data) {
+       $("#container-content").html(data)
+    });
+}
+
+function connect_to_container(id) {
+   window.location.href = '/container/connect/' + id
+}
+
+function hard_logout() {
+    window.location.href = "/logout?hard"
+}
+
+
+$(document).ready(function() {
+    setInterval(function() {
+         refresh_containers()
+    },5000);
+})
+
+</script>
+
+{%endblock content %}
+
+{%block modals %}
+
+<div class="modal fade" id="new_container_modal" tabindex="-1" role="dialog" aria-labelledby="new_container_modal_label"
+     aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="new_file_modal_label">Create a new Container</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
+                        aria-hidden="true">&times;</span></button>
+            </div>
+
+            <div style="padding:20px;">
+                What kind of container do you want to create?
+            </div>
+
+            <div class="modal-body">
+                <form id="new_resource_form" action="/container/create" method="post">
+                    <div id="name-group" class="form-group">
+                        <label for="name" class="col-form-label">Name</label>
+                        <input type="text" class="form-control" name="name" id="name">
+                        <small>This unique name will be used to identify the container in menus and titles.</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="image" class="col-form-label">Image</label>
+
+
+                        <select type="text" class="form-control" id="image" name="image">
+                            {%for r in images %}
+                            <option value="{{r.id}}" {%if loop.index0== 0 %} selected {%endif%}>{{r.name}} : {{r.description}} </option>
+                            {%endfor%}
+                        </select>
+                        <small> What image should be used to create the container. </small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="resource" class="col-form-label">Resource</label>
+                        <select type="text" class="form-control" id="resource" name="resource">
+                            {%for r in resources %}
+                            <option value="{{r.id}}" {%if loop.index0== 0 %} selected {%endif%}>{{r.name}} ({{r.price}}c per minute ): {{r.description}} </option>
+                            {%endfor%}
+                        </select>
+                        <small> What type of resource should be used to run the container. </small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="cdesc" class="col-form-label">Description</label>
+                        <textarea placeholder="Describe the container" type="text" class="form-control" id="cdesc" name="desc"></textarea>
+                        <small> A small description to identify your container </small>
+                    </div>
+
+
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn  btn-secondary" data-dismiss="modal">Close</button>
+                <button type="submit" class="btn  btn-primary" form="new_resource_form">Create Container</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="new_snapshot_modal" tabindex="-1" role="dialog" aria-labelledby="new_snapshot_modal_label"
+     aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="new_snapshot_modal_label">Create a Container Snapshot</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
+                        aria-hidden="true">&times;</span></button>
+            </div>
+
+            <div class="modal-body">
+                <form id="new_snapshot_form" action="/container/snapshot" method="post">
+                    <input name="id" id="nsnap" type="hidden" value="">
+                    <div id="aname-group" class="form-group">
+                        <label for="name" class="col-form-label">Name</label>
+                        <input type="text" class="form-control" name="name" id="aname">
+                        <small>This unique name will be used to identify the image snapshot.</small>
+                    </div>
+
+                    <div id="aaname-group" class="form-group">
+                        <label for="name" class="col-form-label">Name</label>
+                        <textarea class="form-control" name="description" id="desc"></textarea>
+                        <small>Describe the contents of this snapshot</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn  btn-secondary" data-dismiss="modal">Close</button>
+                <button type="submit" class="btn  btn-primary" form="new_snapshot_form">Create Snapshot</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{%endblock modals%}

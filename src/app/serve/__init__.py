@@ -10,9 +10,14 @@ import websockets
 from flask import Blueprint, render_template, current_app, request, make_response, jsonify, send_file, g, Response
 from werkzeug.utils import redirect
 from werkzeug.security import generate_password_hash, check_password_hash
-from app.serve.container import launch_docker_container, docker_container_ready, stop_docker_container
 import docker
 from flask_sock import Sock
+
+from app.serve.container import list_user_images, list_user_containers, list_all_images, create_docker_container, delete_docker_container, \
+    delete_docker_image, start_docker_container, create_docker_image, stop_docker_container, list_available_resources, get_account_balance, \
+    add_money
+
+from app.serve.container import docker_container_ready
 
 docker_client = docker.from_env()
 import socketio as sio
@@ -153,6 +158,73 @@ def createAccount():
         return render_template("login.html", newerror=error, newuser=1)
 
 
+@blueprint.route('/containers', methods=["GET"])
+def container_management():
+    print("AA" , list_user_images(g.user))
+    return render_template("container.html", balance=get_account_balance(g.user), resources=list_available_resources(g.user), images=list_all_images(g.user), containers=list_user_containers(g.user) )
+
+@blueprint.route('/container/refresh', methods=["GET"])
+def container_management_r():
+     return container_management_content()
+
+
+def container_management_content():
+    print("AA" , list_user_images(g.user))
+    return render_template("container_content.html", balance=get_account_balance(g.user), resources=list_available_resources(g.user), images=list_all_images(g.user), containers=list_user_containers(g.user) )
+
+
+@blueprint.route('/container/create', methods=["POST"])
+def create_container():
+    name = request.form.get("name")
+    image = request.form.get("image")
+    resource = request.form.get("resource")
+    desc = request.form.get("desc","No description available")
+    create_docker_container(g.user, name, image, resource, desc )
+    return make_response(redirect("/containers"),302)
+
+@blueprint.route('/container/stop/<cid>', methods=["POST"])
+def stop_container(cid):
+    stop_docker_container(g.user, cid)
+    return container_management_content()
+
+@blueprint.route('/container/start/<cid>', methods=["POST"])
+def start_container(cid):
+    start_docker_container(g.user, cid)
+    return container_management_content()
+
+@blueprint.route('/container/delete/<cid>', methods=["POST"])
+def delete_container(cid):
+    delete_docker_container(g.user,cid)
+    return container_management_content()
+
+@blueprint.route('/container/connect/<cid>', methods=["GET"])
+def connect_to_container(cid):
+    start_docker_container(g.user, cid)
+    response = make_response(redirect("/"))
+    response.set_cookie('vnv-docker-connect', cid)
+    return response
+
+@blueprint.route('/container/snapshot', methods=["POST"])
+def create_image():
+    cid = request.form.get("id")
+    create_docker_image(g.user, cid, request.form.get("name"), request.form.get("description"))
+    return make_response(redirect("/containers"))
+
+
+@blueprint.route('/container/delete_image/<cid>', methods=["POST"])
+def delete_image(cid):
+    delete_docker_image(g.user, cid)
+    return container_management_content()
+
+@blueprint.route('/container/balance', methods=["GET"])
+def account_balance():
+    return make_response(str(get_account_balance(g.user)),200)
+
+@blueprint.route('/container/fund/<int:amount>', methods=["POST"])
+def add_funds(amount):
+    return make_response(str(add_money(g.user, amount)),200)
+
+
 @blueprint.route('/login', methods=["POST"])
 def login():
     # If the user is logged in, then we forward the login
@@ -169,8 +241,8 @@ def login():
 
     uname = request.form.get("username")
     if userExists(uname) and check_password_hash(getUser(uname)["Password"], request.form.get("password")):
-        launch_docker_container(uname, request.form.get("password"), current_app.config["DOCKER_IMAGE"])
-        response = make_response(redirect("/"))
+        #launch_docker_container(uname, request.form.get("password"), current_app.config["DOCKER_IMAGE"])
+        response = make_response(redirect("/containers"))
         response.set_cookie('vnv-docker-login', GET_COOKIE_TOKEN(uname))
         return response
 
@@ -182,13 +254,12 @@ def logout():
     # We do not proxy logout requests -- We just log the user out and stop
     # there container. This is nice as it means the logout button in the container
     # works (make sure?)
-    getUser(g.user).pop("Cookie")
-    stop_docker_container()
-    response = make_response(redirect("/"))
-    response.set_cookie('vnv-docker-login', "", expires=0)
-    response.set_cookie('vnv-container-login', "", expires=0)
+    response = make_response(redirect("/containers"))
+    if "hard" in request.args:
+        getUser(g.user).pop("Cookie")
+        response.set_cookie('vnv-docker-login', "", expires=0)
+    response.set_cookie('vnv-docker-connect', "", expires=0)
     return response
-
 
 def loading(count):
     if count == 0:
@@ -196,9 +267,17 @@ def loading(count):
     else:
         return make_response(str(count + 1), 205)
 
+
 @blueprint.route('/<path:path>', methods=["GET", "POST"])
 def proxy(path):
-    container, theia, paraview = docker_container_ready()
+
+
+    containerId = request.cookies.get("vnv-docker-connect")
+    if containerId is None:
+        return redirect("/containers")
+
+
+    container, theia, paraview = docker_container_ready(containerId)
 
     count = int(request.args.get("count", "0"))
 
@@ -212,9 +291,8 @@ def proxy(path):
         if path == "theia" or (path == "" and "theia" in request.args):
             PROXIED_PATH = "http://localhost:" + theia
 
-        elif path == "paraview" or (path == "" and paraview in request.args):
+        elif path == "paraview" or (path == "" and "paraview" in request.args):
             return render_template("pvindex.html")
-
         elif path in current_app.config["THEIA_FORWARDS"]:
             PROXIED_PATH = "http://localhost:" + theia + request.full_path
         elif path in current_app.config["PARAVIEW_FORWARDS"]:
@@ -262,8 +340,8 @@ def register(socketio, apps, config):
 
         def connect(self):
             if self.sock is None:
-
-                container, theia, paraview = docker_container_ready()
+                containerId = request.cookies.get("vnv-docker-connect")
+                container, theia, paraview = docker_container_ready(containerId)
 
                 # If theia then set the docker theia port instead.
                 container = theia if self.theia else container
@@ -283,7 +361,14 @@ def register(socketio, apps, config):
         def to_docker_container(self, event, data):
             self.connect()
             if self.sock is not None:
-                self.sock.emit(event=event, data=data, namespace=f"/{self.pty}")
+                count = 0
+                while count < 5:
+                    try:
+                        self.sock.emit(event=event, data=data, namespace=f"/{self.pty}")
+                        count = 100
+                    except:
+                        threading.Event().wait(1)
+                        count += 1
             else:
                 socketio.emit("Could not connect", namespace=f"/{self.pty}", to=self.sid)
 
@@ -301,9 +386,6 @@ def register(socketio, apps, config):
         # Forward websocket to the paraview server.
 
     sock = Sock(apps)
-    websocks = {
-
-    }
 
     class WSockApp:
         def __init__(self, ip, ws):
@@ -331,7 +413,8 @@ def register(socketio, apps, config):
     @sock.route("/ws")
     def echo(ws):
         if a_check_valid_login():
-            container, theia, paraview = docker_container_ready()
+            containerId = request.cookies.get("vnv-docker-connect")
+            container, theia, paraview = docker_container_ready(containerId)
             wsock = WSockApp(paraview, ws)
             wsock.serve()
             while wsock.running():

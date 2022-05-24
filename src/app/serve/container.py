@@ -1,8 +1,12 @@
+import base64
+import json
 import threading
+import uuid
 
 import docker
 from docker.errors import NotFound
-from flask import g
+from flask import g, current_app
+from .common import benc, Container
 
 '''
 TODO We can switch this out for one that launches containers on AWS? 
@@ -11,61 +15,132 @@ allow incoming html from this ip ? + turn on authentication?
 Right now, we turn of authentication for those containers because they 
 are not accessible through the outside world.. 
 '''
-docker_client = docker.from_env()
+
+from .local import DockerImplementation as Implementation
+
+def set_container_status(container):
+    if isinstance(container,list):
+        for cont in container:
+            set_container_status(cont)
+    elif isinstance(container,Container):
+        container.status_ = Implementation.status(container.id)
+    return container
+
+def get_user_volume_name(username):
+    Implementation.get_user_volume_name(username)
+
+def list_available_resources(uname):
+    return Implementation.resources(uname)
+
+def list_user_containers(username):
+    return set_container_status(Implementation.containers(username))
 
 
+def add_new_container(username, containerName, image, resource, desc, id):
+    return set_container_status(Implementation.new_container(username, containerName, image, resource, desc, id))
 
-def docker_container_ready():
+def remove_docker_container(username, container_id):
+    return Implementation.remove_container(username, container_id)
 
+def mark_stopped(username, container_id):
+    return Implementation.mark_stopped(username, container_id)
+
+def mark_started(username, container_id):
+    return Implementation.mark_started(username, container_id)
+
+def list_all_images(username):
+    return Implementation.images(username, all=True)
+
+def list_user_images(username):
+    return Implementation.images(username, all=False)
+
+def execute_command(image, command):
+    return Implementation.execute(image, command)
+
+def add_new_image(username, name, desc, id):
+    return Implementation.new_image(username, name, desc, id)
+
+def remove_docker_image(username, image_id):
+    return Implementation.remove_image(username, image_id)
+
+def docker_container_ready(container_id):
+    return Implementation.ready_(container_id)
+
+def create_docker_container(uname, name, image, resource, image_desc):
     try:
-        c = docker_client.containers.get("vnv-" + g.user)
-        return c.ports['5001/tcp'][0]["HostPort"], c.ports['3000/tcp'][0]["HostPort"], c.ports["9000/tcp"][0]["HostPort"]
+        container_id = "vnv-" + uuid.uuid4().hex
+        container = add_new_container(uname, name, image, resource, image_desc, container_id)
+        comm = "/vnv-gui/launch.sh "
+        volumes = {Implementation.get_user_volume_name(container.user): {'bind': '/container', 'mode': 'rw'}}
+        threading.Thread(target=Implementation.create_, args=[container, comm, volumes]).start()
+    except:
+        pass
+
+def stop_docker_container(username, container_id):
+    try:
+        mark_stopped(username, container_id)
+        threading.Thread(target=Implementation.stop_, args=[container_id]).start()
+    except:
+        pass
+
+def start_docker_container(username, container_id):
+    try:
+        mark_started(username,container_id)
+        threading.Thread(target=Implementation.start_, args=[container_id]).start()
+    except Exception as e :
+        print("SSSSSSSSSSSSSSS" + str(e) )
+
+
+def delete_docker_container(username, container_id):
+    try:
+        threading.Thread(target=Implementation.delete_, args=[container_id]).start()
+        remove_docker_container(username, container_id)
+    except:
+        pass
+
+
+def create_docker_image(username, container_id, name, desc):
+    try:
+        new_image_id = "vnv-" + uuid.uuid4().hex
+        image = add_new_image(username, name, desc, new_image_id)
+        threading.Thread(target=Implementation.snapshot_, args=[container_id, image]).start()
 
     except:
         pass
 
-    print("Looking for docker container for ", g.user)
-
-    return None,None,None
-
-
-def launch_docker_container(uname, password, DOCKER_IMAGE_NAME="vnv_serve:latest"):
-    '''
-        TODO: Add a wsgi lock across all wsgi workers. We can use named locks based on 
-        the uname to get better performance across users (no need to lock for all users while
-        starting the docker container for one user. 
-    '''
-
+def delete_docker_image(username, image_id):
     try:
-        container = docker_client.containers.get("vnv-" + uname)
-        container.start()
-
-
-    except NotFound as e:
-        #Container not found for user -- so create one.
-        try:
-            comm = "./launch.sh " + uname
-
-            try:
-                volume = docker_client.volumes.get("vnv-" + uname)
-            except Exception as e:
-                volume = docker_client.volumes.create("vnv-"+uname)
-
-            volumes = {'vnv-'+uname : {'bind': '/container', 'mode': 'rw'} }
-            container = docker_client.containers.run("vnv_serve:latest", volumes=volumes, command=comm, ports={5001:None, 3000:None, 9000:None}, name="vnv-" + uname, detach=True)
-    
-        except Exception as e:
-            print(e)
-            return None
-
-def stop_(uname):
-    c = docker_client.containers.get("vnv-" + uname)
-    c.stop()
-
-def stop_docker_container():
-    try:
-        c = g.user
-        threading.Thread(target=stop_, args=[c]).start()
+        threading.Thread(target=Implementation.delete_image_, args=[image_id]).start()
+        remove_docker_image(username, image_id)
     except:
         pass
-    print("Killing docker container for " ,g.user)
+
+def add_money(username, amount):
+    return Implementation.add_money(username, amount)
+
+def get_account_balance(username):
+    return Implementation.balance(username)
+
+
+try:
+    INITIALIZED_CONTAINERS
+except:
+    INITIALIZED_CONTAINERS = True
+
+    for container in Implementation.list_containers():
+        Implementation.new_container_(container)
+    for image in Implementation.list_images():
+        Implementation.new_image_(image)
+
+    def monitor_containers():
+        for container in Implementation.list_containers():
+            if Implementation.status(container.id) == "running":
+                Implementation.remove_money(container.user, container.price())
+
+    def monitor_containers_forever():
+        ev = threading.Event()
+        while True:
+            monitor_containers()
+            ev.wait(60)
+
+    threading.Thread(target=monitor_containers_forever).start()

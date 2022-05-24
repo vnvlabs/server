@@ -1,0 +1,87 @@
+
+
+<img src="/flask_static/assets/images/logo-dark.png" alt="" class="img-fluid mb-4"
+     style="width: 400px; margin-left: auto;margin-right: auto;">
+
+<div id="containers" style="display: flex; flex-direction: column; height: 48%; margin-bottom: 20px;">
+    <div style="display:flex; justify-content:flex-end; margin-right:10px; font-size:15px; font-weight:900; align-items:center;" >Account Balance: $<span id="account_bal">{{balance/100}}</span></div>
+    <div class="card" style="padding:15px; flex:1; margin-top:5px; overflow:scroll;">
+
+        <div style="display: flex;align-items:center;">
+            <h2 style="flex:1"> Containers</h2>
+            <button onclick="$('#new_container_modal').modal('show');" style="margin-left:10px;" class="btn btn-primary">New Container</button>
+        </div>
+
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Description</th>
+                    <th>Image</th>
+                    <th>Resource</th>
+                    <th>Status</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+            {%for container in containers %}
+            <tr>
+                <td style="vertical-align:middle;">{{container.name}}</td>
+                <td style="vertical-align:middle;">{{container.desc}}</td>
+                <td style="vertical-align:middle;">{{container.image}}</td>
+                <td style="vertical-align:middle;">{{container.resource.name}}</td>
+                <td style="vertical-align:middle;">{{container.status()}}</td>
+                <td>
+                  <div style="display:flex; justify-content:flex-end">
+                    {%if container.status() == "running" %}
+                        <button class="btn btn-primary" style="margin-left:10px;" onclick="connect_to_container('{{container.id}}')" >Connect</button>
+                        <button class="btn btn-primary" style="margin-left:10px;" onclick="stop_container('{{container.id}}')" >Stop</button>
+                    {%else%}
+                        <button class="btn btn-primary" style="margin-left:10px;" onclick="start_container('{{container.id}}')" >Start</button>
+                        <button class="btn btn-primary" style="margin-left:10px;" onclick="delete_container('{{container.id}}')" >Delete</button>
+                    {%endif%}
+                    <button class="btn btn-primary" style="margin-left:10px;" onclick="snapshot_container('{{container.id}}')" >Snapshot</button>
+                  </div>
+                </td>
+            </tr>
+            {%endfor%}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div id="images" style="display: flex; flex-direction: column; height: 48%; margin-bottom: 20px;">
+
+
+    <div class="card" style="padding:15px;flex:1; margin-top:5px; overflow:scroll;">
+        <div style="display: flex; align-items:center;">
+            <h2 style="flex:1">Custom Images</h2>
+        </div>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Image</th>
+                    <th>Description</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+            {%for container in images %}
+            {% if container.private %}
+            <tr >
+                <td style="vertical-align:middle;">{{container.name}}</td>
+                <td style="vertical-align:middle;">{{container.id}}</td>
+                <td style="vertical-align:middle;">{{container.description}}</td>
+                <td>
+                  <div style="display:flex; justify-content:flex-end">
+                      <button class="btn btn-primary" style="margin-left:10px;" onclick="delete_snapshot('{{container.id}}')">Delete</button>
+                  </div>
+                </td>
+            </tr>
+            {%endif%}
+            {%endfor%}
+            </tbody>
+        </table>
+    </div>
+</div>

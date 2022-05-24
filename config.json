@@ -1,12 +1,22 @@
 {
 	"port" : 5001,
 	"DEBUG" : false,
-	"DOCKER_IMAGE" : "vnv_serve",
 	"DEFAULT_USERS" : {
 		"Admin" : {"password" : "Admin" , "admin" : true},
 		"User" : {"password" : "User" , "admin" : false}
 	},
-        "LOGO" : "docker/config/static/logo.png",
-	"ICON" : "docker/config/static/favicon.ico"
+	"DOCKER_IMAGES": {
+		"vnv_demo:latest" : ["VnV Demo Examples" , "A Set of Simple VnV Examples"],
+		"vnv_hypre:latest" : ["Hypre", "Scalable Linear Solvers and Multigrid Methods"],
+		"vnv_petsc:latest" : ["PETSc"," Portable, Extensible Toolkit for Scientific Computation"],
+		"vnv_libmesh:latest" : ["Libmesh", "A C++ Finite Element Library"],
+		"vnv_moose:latest" : ["MOOSE", "Multiphysics Object-Oriented Simulation Environment"],
+		"mfem_debug:latest" : ["MFEM", "a free, lightweight, scalable C++ library for finite element methods"],
+		"vnv_asgard:latest" : ["Asgard", "Adaptive Sparse Grid Discretization"],
+		"vnv_:latest" : ["The Heat equation" , "A Simple VnV Example" ],
+		"vnv_proxy_apps:latest" : ["ECP Proxy Apps", "A collection of ECP Proxy Applications"],
+		"vnv_all:latest" : ["The Kitchen Sink", "The full collection of VnV Example Applications"]
+	}
 }	
+
 
