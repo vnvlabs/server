@@ -18,7 +18,7 @@ class Config:
     DOCKER_IMAGES = {}
     ALLOW_NEW_USERS = True
     AUTHORIZATION_CODES = ["Trial"]
-
+    HOST = "0.0.0.0"
 app_config = Config()
 
 with open(sys.argv[1],'r') as c:
@@ -51,4 +51,4 @@ app_config.THEIA_FORWARDS = [ a.strip() for a in forwards if len(a) > 0 and a !=
 
 if __name__ == "__main__":
     socketio, app = create_serve_app(app_config)
-    socketio.run(app, use_reloader=False, host="0.0.0.0", port=app_config.port)
+    socketio.run(app, use_reloader=False, host=app_config.HOST, port=app_config.port)

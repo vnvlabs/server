@@ -271,6 +271,8 @@ def loading(count):
 @blueprint.route('/<path:path>', methods=["GET", "POST"])
 def proxy(path):
 
+    def ppath(port,path=""):
+        return f'http://{current_app.config["HOST"]}:{port}{path}'
 
     containerId = request.cookies.get("vnv-docker-connect")
     if containerId is None:
@@ -289,16 +291,16 @@ def proxy(path):
             return redirect("/?theia")
 
         if path == "theia" or (path == "" and "theia" in request.args):
-            PROXIED_PATH = "http://localhost:" + theia
+            PROXIED_PATH = ppath(theia)
 
         elif path == "paraview" or (path == "" and "paraview" in request.args):
             return render_template("pvindex.html")
         elif path in current_app.config["THEIA_FORWARDS"]:
-            PROXIED_PATH = "http://localhost:" + theia + request.full_path
+            PROXIED_PATH = ppath(theia,request.full_path)
         elif path in current_app.config["PARAVIEW_FORWARDS"]:
-            PROXIED_PATH = "http://localhost:" + paraview + request.full_path
+            PROXIED_PATH = ppath(paraview,request.full_path)
         else:
-            PROXIED_PATH = "http://localhost:" + container + request.full_path
+            PROXIED_PATH = ppath(container,request.full_path)
 
         if request.method == "GET":
             resp = requests.get(PROXIED_PATH)
@@ -309,9 +311,17 @@ def proxy(path):
             return response
 
         elif request.method == "POST":
-            if request.get_json() is None:
+            try:
+                request.is_json
+            except Exception as e:
+                print("What")
+
+            print(PROXIED_PATH, "EEEEEEEEEE", request.data)
+            if not request.is_json :
+                print(request.form, "DDDD")
                 resp = requests.post(PROXIED_PATH, data=request.form)
             else:
+                print("EEEEE")
                 resp = requests.post(PROXIED_PATH, json=request.get_json())
 
             excluded_headers = ["content-encoding", "content-length", "transfer-encoding", "connection"]
