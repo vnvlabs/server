@@ -13,6 +13,10 @@ class DockerImplementation(CommonImpl):
         return cls.docker_client.containers.run(image, command, remove=True).decode('ascii')
 
     @classmethod
+    def image_exists(cls, img):
+        return cls.docker_client.images.get(img) is not None
+
+    @classmethod
     def status(cls, container_id):
         try:
             return cls.docker_client.containers.get(container_id).status

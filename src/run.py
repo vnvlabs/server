@@ -7,7 +7,7 @@ import sys,json
 import os
 import shutil
 
-from app.serve.container import execute_command
+from app.serve.container import execute_command, image_exists
 
 
 class Config:
@@ -30,6 +30,15 @@ with open(sys.argv[1],'r') as c:
         except Exception as e:
             print(e, "Could not configure option ", k, v)
 
+# Delete any images that dont work
+fkeys = [k for k,v in app_config.DOCKER_IMAGES.keys() if not image_exists(k)]
+for k in fkeys:
+    print("Image ", k, " could not be found")
+    app_config.DOCKER_IMAGES.pop(k)
+
+if len(app_config.DOCKER_IMAGES) == 0:
+    print("At least one VnV Enabled docker image is required.")
+    exit(32)
 
 forwards=[]
 pvforwards = execute_command(list(app_config.DOCKER_IMAGES.keys())[0], "ls /paraview/share/paraview-5.10/web/visualizer/www" ).split("\n")
@@ -45,8 +54,6 @@ for line in theiaforwards:
        kk = line.replace("\t", " " )
        forwards = forwards + kk.split(" ")
 app_config.THEIA_FORWARDS = [ a.strip() for a in forwards if len(a) > 0 and a != "index.html"]
-
-
 
 
 if __name__ == "__main__":

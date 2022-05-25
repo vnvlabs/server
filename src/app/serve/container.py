@@ -57,6 +57,9 @@ def list_user_images(username):
 def execute_command(image, command):
     return Implementation.execute(image, command)
 
+def image_exists(image):
+    return Implementation.image_exists(image)
+
 def add_new_image(username, name, desc, id):
     return Implementation.new_image(username, name, desc, id)
 
