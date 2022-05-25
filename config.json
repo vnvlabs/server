@@ -11,9 +11,9 @@
 		"vnv_petsc:latest" : ["PETSc"," Portable, Extensible Toolkit for Scientific Computation"],
 		"vnv_libmesh:latest" : ["Libmesh", "A C++ Finite Element Library"],
 		"vnv_moose:latest" : ["MOOSE", "Multiphysics Object-Oriented Simulation Environment"],
-		"mfem_debug:latest" : ["MFEM", "a free, lightweight, scalable C++ library for finite element methods"],
+		"vnv_mfem:latest" : ["MFEM", "a free, lightweight, scalable C++ library for finite element methods"],
 		"vnv_asgard:latest" : ["Asgard", "Adaptive Sparse Grid Discretization"],
-		"vnv_:latest" : ["The Heat equation" , "A Simple VnV Example" ],
+		"vnv_heat:latest" : ["The Heat equation" , "A Simple VnV Example" ],
 		"vnv_proxy_apps:latest" : ["ECP Proxy Apps", "A collection of ECP Proxy Applications"],
 		"vnv_all:latest" : ["The Kitchen Sink", "The full collection of VnV Example Applications"]
 	}

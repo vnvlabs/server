@@ -31,7 +31,7 @@ with open(sys.argv[1],'r') as c:
             print(e, "Could not configure option ", k, v)
 
 # Delete any images that dont work
-fkeys = [k for k,v in app_config.DOCKER_IMAGES.keys() if not image_exists(k)]
+fkeys = [k for k in app_config.DOCKER_IMAGES.keys() if not image_exists(k)]
 for k in fkeys:
     print("Image ", k, " could not be found")
     app_config.DOCKER_IMAGES.pop(k)

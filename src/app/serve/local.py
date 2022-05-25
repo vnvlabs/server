@@ -14,7 +14,11 @@ class DockerImplementation(CommonImpl):
 
     @classmethod
     def image_exists(cls, img):
-        return cls.docker_client.images.get(img) is not None
+        try:
+            cls.docker_client.images.get(img)
+            return True
+        except:
+            return False
 
     @classmethod
     def status(cls, container_id):
