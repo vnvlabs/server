@@ -27,7 +27,7 @@ def create_serve_app(config):
 
     app = Flask(__name__, static_url_path='/flask_static', static_folder="static")
     app.config.from_object(config)
-    socketio = SocketIO(app)
+    socketio = SocketIO(app, cors_allowed_origins=config.HOSTCORS)
     serve.register(socketio, app, config)
 
     return socketio, app

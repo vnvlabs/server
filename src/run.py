@@ -20,6 +20,7 @@ class Config:
     AUTHORIZATION_CODES = ["Trial"]
     HOST = "0.0.0.0"
     WSPATH = "wss://vnvlabs.com/ws"
+    HOSTCORS = "https://vnvlabs.com"
 
 app_config = Config()
 
