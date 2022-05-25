@@ -19,6 +19,8 @@ class Config:
     ALLOW_NEW_USERS = True
     AUTHORIZATION_CODES = ["Trial"]
     HOST = "0.0.0.0"
+    WSPATH = "wss://vnvlabs.com/ws"
+
 app_config = Config()
 
 with open(sys.argv[1],'r') as c:

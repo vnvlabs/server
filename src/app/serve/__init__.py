@@ -224,6 +224,10 @@ def account_balance():
 def add_funds(amount):
     return make_response(str(add_money(g.user, amount)),200)
 
+@blueprint.route("/paraview/", methods=["POST"])
+def paraview_o():
+    return make_response(jsonify({"sessionURL" : current_app.config["WSPATH"]}),200)
+
 
 @blueprint.route('/login', methods=["POST"])
 def login():
