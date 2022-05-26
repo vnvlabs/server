@@ -5,7 +5,7 @@ import docker
 from .common import CommonImpl, Container, bdec, Image, benc
 
 
-class DockerImplementation(CommonImpl):
+class DockerImplementation:
     docker_client = docker.from_env()
 
     @classmethod
@@ -28,10 +28,21 @@ class DockerImplementation(CommonImpl):
             return "invalid"
 
     @classmethod
-    def create_(cls, container, comm, volumes):
+    def create_volume(cls, username):
+        volname = "vnv-volume-"+username
+        try:
+            cls.docker_client.volumes.get(volname)
+        except:
+            cls.docker_client.volumes.create(volname)
+        return volname
+
+    @classmethod
+    def create_(cls, container, comm):
 
         try:
             labels = {"vnv-container-info": container.to_json()}
+            volumes = { cls.create_volume(container.user): {'bind': '/data', 'mode': 'rw'}}
+
             cls.docker_client.containers.run(container.image, volumes=volumes, command=comm, labels=labels,
                                              ports={5001: None, 3000: None, 9000: None}, name=container.id, detach=True)
 
@@ -94,4 +105,3 @@ class DockerImplementation(CommonImpl):
             inf = json.loads(bdec(b64))
             images.append(Image.from_json(inf))
         return images
-

@@ -16,7 +16,8 @@
 		"vnv_heat:latest" : ["The Heat equation" , "A Simple VnV Example" ],
 		"vnv_proxy_apps:latest" : ["ECP Proxy Apps", "A collection of ECP Proxy Applications"],
 		"vnv_all:latest" : ["The Kitchen Sink", "The full collection of VnV Example Applications"]
-	}
+	},
+	"AUTHORIZATION_CODES" : ["Mud"]
 }	
 
 

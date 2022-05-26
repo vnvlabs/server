@@ -1,5 +1,6 @@
 # -*- encoding: utf-8 -*-
 import asyncio
+import re
 import threading
 import uuid
 from os import abort
@@ -58,7 +59,7 @@ def getUser(username):
 
 
 def createUser(username, passw, admin=False):
-    users[username] = {"Password": passw, "Admin": admin}
+    users[username.lower()] = {"Password": passw, "Admin": admin}
 
 
 def userExists(username):
@@ -132,12 +133,24 @@ def home():
 
 
 def create_new_user_allowed(uname, auth):
+
     if not current_app.config["ALLOW_NEW_USERS"]:
         return "New User creation is not supported at this time."
+
     if auth not in current_app.config["AUTHORIZATION_CODES"] or len(current_app.config["AUTHORIZATION_CODES"]) == 0:
         return "Invalid Authorization Code"
+
     if userExists(uname):
         return "Username is not available"
+
+    if len(uname) < 3:
+        return "Username is to short"
+
+    if len(uname) > 20:
+        return "Username is to long"
+
+    if not re.match("^[a-zA-Z0-9]+$", uname):
+       return "Username is invalid [a-zA-Z0-9] only"
 
     return None  # Good to go.
 
@@ -146,9 +159,11 @@ def createAccount():
     if g.user is not None:
         return proxy("login")
 
-    uname = request.form.get("username")
+    uname = request.form.get("username").lower()
     passw = request.form.get("password")
     auth = request.form.get("auth")
+
+
 
     error = create_new_user_allowed(uname, auth)
     if error is None:
@@ -157,10 +172,8 @@ def createAccount():
     else:
         return render_template("login.html", newerror=error, newuser=1)
 
-
 @blueprint.route('/containers', methods=["GET"])
 def container_management():
-    print("AA" , list_user_images(g.user))
     return render_template("container.html", balance=get_account_balance(g.user), resources=list_available_resources(g.user), images=list_all_images(g.user), containers=list_user_containers(g.user) )
 
 @blueprint.route('/container/refresh', methods=["GET"])
@@ -169,7 +182,6 @@ def container_management_r():
 
 
 def container_management_content():
-    print("AA" , list_user_images(g.user))
     return render_template("container_content.html", balance=get_account_balance(g.user), resources=list_available_resources(g.user), images=list_all_images(g.user), containers=list_user_containers(g.user) )
 
 
@@ -243,7 +255,7 @@ def login():
     if "auth" in request.form:
         return createAccount()
 
-    uname = request.form.get("username")
+    uname = request.form.get("username").lower()
     if userExists(uname) and check_password_hash(getUser(uname)["Password"], request.form.get("password")):
         #launch_docker_container(uname, request.form.get("password"), current_app.config["DOCKER_IMAGE"])
         response = make_response(redirect("/containers"))
@@ -283,7 +295,7 @@ def proxy(path):
         return redirect("/containers")
 
 
-    container, theia, paraview = docker_container_ready(containerId)
+    container, theia, paraview = docker_container_ready(g.user,containerId)
 
     count = int(request.args.get("count", "0"))
 
@@ -320,12 +332,9 @@ def proxy(path):
             except Exception as e:
                 print("What")
 
-            print(PROXIED_PATH, "EEEEEEEEEE", request.data)
             if not request.is_json :
-                print(request.form, "DDDD")
                 resp = requests.post(PROXIED_PATH, data=request.form)
             else:
-                print("EEEEE")
                 resp = requests.post(PROXIED_PATH, json=request.get_json())
 
             excluded_headers = ["content-encoding", "content-length", "transfer-encoding", "connection"]
@@ -337,7 +346,6 @@ def proxy(path):
         else:
             print("Unsupported Query sent to proxy")
     except Exception as e:
-        print(e)
         return loading(count)
 
 
@@ -355,7 +363,7 @@ def register(socketio, apps, config):
         def connect(self):
             if self.sock is None:
                 containerId = request.cookies.get("vnv-docker-connect")
-                container, theia, paraview = docker_container_ready(containerId)
+                container, theia, paraview = docker_container_ready(g.user, containerId)
 
                 # If theia then set the docker theia port instead.
                 container = theia if self.theia else container
@@ -428,7 +436,7 @@ def register(socketio, apps, config):
     def echo(ws):
         if a_check_valid_login():
             containerId = request.cookies.get("vnv-docker-connect")
-            container, theia, paraview = docker_container_ready(containerId)
+            container, theia, paraview = docker_container_ready(g.user, containerId)
             wsock = WSockApp(paraview, ws)
             wsock.serve()
             while wsock.running():

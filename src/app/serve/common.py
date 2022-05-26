@@ -106,9 +106,7 @@ class CommonImpl:
     @classmethod
     def init_user(cls, username):
         if username not in cls.CONTAINER_MAP:
-            cls.CONTAINER_MAP[username] = {"account": 10000, "containers": {}, "images": {},
-                                           "volume": "vnv-" + uuid.uuid4().hex}
-            cls.docker_client.volumes.create(cls.CONTAINER_MAP[username]["volume"])
+            cls.CONTAINER_MAP[username] = {"account": 10000, "containers": {}, "images": {}}
 
     @classmethod
     def init_default_images(cls):
@@ -132,17 +130,22 @@ class CommonImpl:
         return uimages
 
     @classmethod
-    def get_resource(cls,resource):
+    def get_resource(cls,username, resource):
         if not isinstance(resource, Resource):
             resource = cls.RESOURCES.get(resource, cls.RESOURCES["basic"])
         return resource
 
+
     @classmethod
     def new_container(cls,username, containerName, image, resource, desc, id):
-        resource = cls.get_resource(resource)
-        cls.init_user(username)
-        cls.CONTAINER_MAP[username]["containers"][id] = Container(id, username, containerName,image,resource,desc)
-        return cls.CONTAINER_MAP[username]["containers"][id]
+        img = cls.get_image(username, image)
+        if img is not None:
+            resource = cls.get_resource(username,resource)
+            cls.init_user(username)
+            cls.CONTAINER_MAP[username]["containers"][id] = Container(id, username, containerName,image,resource,desc)
+            return cls.CONTAINER_MAP[username]["containers"][id]
+        return None
+
 
     @classmethod
     def new_container_(cls,container):
@@ -155,13 +158,15 @@ class CommonImpl:
         cls.init_user(username)
         if container_id in cls.CONTAINER_MAP[username]["containers"]:
             cls.CONTAINER_MAP[username]["containers"][container_id].stop()
+            return True
 
     @classmethod
     def mark_started(cls, username, container_id):
         cls.init_user(username)
         if container_id in cls.CONTAINER_MAP[username]["containers"]:
             cls.CONTAINER_MAP[username]["containers"][container_id].start()
-
+            return True
+        return False
 
     @classmethod
     def new_image(cls, username, name, desc, id):
@@ -180,22 +185,35 @@ class CommonImpl:
         cls.init_user(username)
         if container_id in cls.CONTAINER_MAP[username]["containers"]:
             cls.CONTAINER_MAP[username]["containers"].pop(container_id)
+            return True
+        return False
+
+    @classmethod
+    def owns_container(cls,username, container_id):
+        cls.init_user(username)
+        return container_id in cls.CONTAINER_MAP[username]["containers"]
 
     @classmethod
     def remove_image(cls, username, image_id):
         cls.init_user(username)
         if image_id in cls.CONTAINER_MAP[username]["images"]:
             cls.CONTAINER_MAP[username]["images"].pop(image_id)
+            return True
+        return False
+
+    @classmethod
+    def get_image(cls, username, image):
+        cls.init_user(username)
+        for img in cls.images(username,all=True):
+            if img.id == image:
+                return img
+
+        return None
 
     @classmethod
     def containers(cls,username):
         cls.init_user(username)
         return list(cls.CONTAINER_MAP.get(username).get("containers").values())
-
-    @classmethod
-    def get_user_volume_name(cls,username):
-        cls.init_user(username)
-        cls.CONTAINER_MAP.get(username).get("volume")
 
     @classmethod
     def add_money(cls, username, amount):
