@@ -10,17 +10,20 @@ import websocket
 import websockets
 from flask import Blueprint, render_template, current_app, request, make_response, jsonify, send_file, g, Response
 from werkzeug.utils import redirect
-from werkzeug.security import generate_password_hash, check_password_hash
 import docker
 from flask_sock import Sock
 
-from app.serve.container import list_user_images, list_user_containers, list_all_images, create_docker_container, delete_docker_container, \
-    delete_docker_image, start_docker_container, create_docker_image, stop_docker_container, list_available_resources, get_account_balance, \
-    add_money
+from src.app.serve.container import list_user_images, list_user_containers, create_docker_container, \
+    delete_docker_container, \
+    delete_docker_image, start_docker_container, create_docker_image, stop_docker_container, list_all_containers, \
+    docker_container_ready, user_owns_image, ALL_RESOURCES
 
-from app.serve.container import docker_container_ready
+from src.app.serve.container import list_all_containers
+from src.app.serve.resource import Container, Image, Resource
+from src.app.serve.users import db
 
 docker_client = docker.from_env()
+
 import socketio as sio
 
 blueprint = Blueprint(
@@ -30,55 +33,58 @@ blueprint = Blueprint(
     template_folder='templates'
 )
 
+ALL_IMAGES = {}
+DEFAULT_IMAGES = []
+DEFAULT_RESOURCES = []
+DATABASE_IMPL = None
 
-def init_users():
-    if len(users) == 0:
-        adminCount = 0
-        try:
-            for k, v in current_app.config["DEFAULT_USERS"].items():
-                createUser(k, generate_password_hash(v["password"]), v.get("admin", False))
-                if v.get("admin", False):
-                    adminCount += 1
-        except:
-            print("USER CONFIGURATION ERROR -- CHECK YOUR DEFAULT USERS AND TRY AGAIN")
-            abort()
-        if len(users) == 0:
-            print("NO DEFAULT USER FOUND -- CHECK YOUR DEFAULT USERS AND TRY AGAIN")
-            abort()
-        if adminCount == 0:
-            print("NO ADMIN USERS FOUND -- You wont be able to configure users ")
+def getDatabaseImpl():
+    return DATABASE_IMPL
 
 
-users = {
-}
+# Decorator to enforce saving g.user at end of function.
+def modifies_user():
+    def decorator_func(func):
+        def wrapper_func(*args, **kwargs):
+            # Invoke the wrapped function first
+            retval = func(*args, **kwargs)
+            # Now do something here with retval and/or action
+            if g.user is not None:
+                getDatabaseImpl().updateUser(g.user)
+            return retval
+        return wrapper_func
+    return decorator_func
 
+
+def createUser(username, passw, authCode, admin=False, resources=DEFAULT_RESOURCES, images=DEFAULT_IMAGES, override=False):
+
+    if not override:
+        if  not current_app.config["ALLOW_NEW_USERS"]:
+            return "New User creation is not supported at this time."
+
+        if current_app.config.get("REQUIRE_AUTH",True):
+            if not getDatabaseImpl().validateAuthcode(authCode):
+                return "Invalid Authorization Code"
+
+        if len(username) < 3:
+            return "Username is to short"
+
+        if len(username) > 20:
+            return "Username is to long"
+
+        if not re.match("^[a-zA-Z0-9]+$", username):
+            return "Username is invalid [a-zA-Z0-9] only"
+
+    if getDatabaseImpl().getUser(username) is not None:
+        return "Username is not available"
+
+    return getDatabaseImpl().createUser(username,passw, resources=resources,images=images, admin=admin)
 
 def getUser(username):
-    init_users()
-    return users.get(username, None)
-
-
-def createUser(username, passw, admin=False):
-    users[username.lower()] = {"Password": passw, "Admin": admin}
-
+    return getDatabaseImpl().getUser(username)
 
 def userExists(username):
-    init_users()
-    return username in users
-
-
-def GET_COOKIE_TOKEN(username):
-    if not userExists(username):
-        return None
-
-    cook = getUser(username).get("Cookie")
-    if cook is None:
-        uid = uuid.uuid4().hex
-        getUser(username)["Cookie"] = uid
-        return username + ":" + uid
-    else:
-        return username + ":" + cook
-
+    return getUser(username) is not None
 
 def verify_cookie(cook):
     g.user = None
@@ -89,13 +95,19 @@ def verify_cookie(cook):
             u = getUser(s[0])
             if u is None:
                 return False
-            elif u["Cookie"] == s[1]:
-                g.user = s[0]
+
+            if u.validate_cookie(cook):
+                g.user = u
                 return True
+
         return False
     except:
         return False
 
+def list_users():
+    if g.user.admin:
+        return getDatabaseImpl().list_users()
+    return [g.user]
 
 @blueprint.before_request
 def check_valid_login():
@@ -106,24 +118,25 @@ def check_valid_login():
 
 @blueprint.route("/admin")
 def admin_panel():
-    if getUser(g.user)["Admin"]:
-        return render_template("admin.html", users=users, error="")
+    if g.user.admin:
+        return render_template("admin.html", users=list_users(), error="")
 
 
 @blueprint.route("/admin/new_or_reset", methods=["POST"])
 def new_user_or_reset_password():
-    if getUser(g.user)["Admin"]:
+    if g.user.admin:
         uname = request.form["username"]
         passw = request.form["password"]
 
         if userExists(uname):
             u = getUser(uname)
-            u["Password"] = generate_password_hash(passw)
+            u.reset_password(passw)
+            getDatabaseImpl().updateUser(u)
         else:
-            createUser(uname, generate_password_hash(passw))
-
+            ne=createUser(uname, passw, admin=False)
+            if isinstance(ne,str):
+                return render_template("admin.html", users=list_users(), error="ne")
         return make_response(redirect("/admin"), 302)
-
     return redirect("/", 302)
 
 
@@ -131,31 +144,8 @@ def new_user_or_reset_password():
 def home():
     return proxy("")
 
-
-def create_new_user_allowed(uname, auth):
-
-    if not current_app.config["ALLOW_NEW_USERS"]:
-        return "New User creation is not supported at this time."
-
-    if auth not in current_app.config["AUTHORIZATION_CODES"] or len(current_app.config["AUTHORIZATION_CODES"]) == 0:
-        return "Invalid Authorization Code"
-
-    if userExists(uname):
-        return "Username is not available"
-
-    if len(uname) < 3:
-        return "Username is to short"
-
-    if len(uname) > 20:
-        return "Username is to long"
-
-    if not re.match("^[a-zA-Z0-9]+$", uname):
-       return "Username is invalid [a-zA-Z0-9] only"
-
-    return None  # Good to go.
-
-
 def createAccount():
+
     if g.user is not None:
         return proxy("login")
 
@@ -163,26 +153,43 @@ def createAccount():
     passw = request.form.get("password")
     auth = request.form.get("auth")
 
+    ne = createUser(uname, passw, auth)
+    if isinstance(ne,str):
+        return render_template("login.html", newerror=ne, newuser=1)
+    return redirect("/", 302)
 
 
-    error = create_new_user_allowed(uname, auth)
-    if error is None:
-        createUser(uname, generate_password_hash(passw))
-        return redirect("/", 302)
-    else:
-        return render_template("login.html", newerror=error, newuser=1)
 
 @blueprint.route('/containers', methods=["GET"])
 def container_management():
-    return render_template("container.html", balance=get_account_balance(g.user), resources=list_available_resources(g.user), images=list_all_images(g.user), containers=list_user_containers(g.user) )
+    return render_template("container.html",
+                           balance=g.user.balance,
+                           resources=list_available_resources(g.user),
+                           images=list_available_images(g.user),
+                           containers=list_user_containers(g.user.username),
+                           message=None,
+                           stopped_id=None
+                           )
 
 @blueprint.route('/container/refresh', methods=["GET"])
 def container_management_r():
      return container_management_content()
 
+def list_available_resources(user):
+   return [ ALL_RESOURCES[r] for r in user.resources ]
 
-def container_management_content():
-    return render_template("container_content.html", balance=get_account_balance(g.user), resources=list_available_resources(g.user), images=list_all_images(g.user), containers=list_user_containers(g.user) )
+def list_available_images(user):
+    return [ ALL_IMAGES[r] for r in user.images  ] + list_user_images(user.username)
+
+def container_management_content(message=None, stopped_id=None):
+    return render_template("container_content.html",
+                           balance=g.user.balance,
+                           resources=list_available_resources(g.user),
+                           images=list_available_images(g.user),
+                           containers=list_user_containers(g.user.username),
+                           message=message,
+                           stopped_id = stopped_id
+                           )
 
 
 @blueprint.route('/container/create', methods=["POST"])
@@ -190,28 +197,37 @@ def create_container():
     name = request.form.get("name")
     image = request.form.get("image")
     resource = request.form.get("resource")
-    desc = request.form.get("desc","No description available")
-    create_docker_container(g.user, name, image, resource, desc )
-    return make_response(redirect("/containers"),302)
+
+    if g.user.has_resource(resource):
+
+        if not image in g.user.images:
+            if not user_owns_image(image,g.user.username):
+                return make_response("invalid container config", 400)
+
+        desc = request.form.get("desc","No description available")
+        create_docker_container(g.user.username, name, image, ALL_RESOURCES[resource], desc )
+        return make_response(redirect("/containers"),302)
+
+    return make_response("invalid container config", 400)
 
 @blueprint.route('/container/stop/<cid>', methods=["POST"])
 def stop_container(cid):
-    stop_docker_container(g.user, cid)
-    return container_management_content()
+    stop_docker_container(g.user.username, cid)
+    return container_management_content(None, cid)
 
 @blueprint.route('/container/start/<cid>', methods=["POST"])
 def start_container(cid):
-    start_docker_container(g.user, cid)
+    start_docker_container(g.user.username, cid)
     return container_management_content()
 
 @blueprint.route('/container/delete/<cid>', methods=["POST"])
 def delete_container(cid):
-    delete_docker_container(g.user,cid)
+    delete_docker_container(g.user.username,cid)
     return container_management_content()
 
 @blueprint.route('/container/connect/<cid>', methods=["GET"])
 def connect_to_container(cid):
-    start_docker_container(g.user, cid)
+    start_docker_container(g.user.username, cid)
     response = make_response(redirect("/"))
     response.set_cookie('vnv-docker-connect', cid)
     return response
@@ -219,27 +235,29 @@ def connect_to_container(cid):
 @blueprint.route('/container/snapshot', methods=["POST"])
 def create_image():
     cid = request.form.get("id")
-    create_docker_image(g.user, cid, request.form.get("name"), request.form.get("description"))
+    create_docker_image(g.user.username, cid, request.form.get("name"), request.form.get("description"))
     return make_response(redirect("/containers"))
 
 
 @blueprint.route('/container/delete_image/<cid>', methods=["POST"])
 def delete_image(cid):
-    delete_docker_image(g.user, cid)
+    delete_docker_image(g.user.username, cid)
     return container_management_content()
 
 @blueprint.route('/container/balance', methods=["GET"])
 def account_balance():
-    return make_response(str(get_account_balance(g.user)),200)
+    return make_response(str(g.user.balance),200)
+
 
 @blueprint.route('/container/fund/<int:amount>', methods=["POST"])
 def add_funds(amount):
-    return make_response(str(add_money(g.user, amount)),200)
+    g.user.add_money(amount)
+    getDatabaseImpl().updateUser(g.user)
+    return make_response(str(g.user.balance),200)
 
 @blueprint.route("/paraview/", methods=["POST"])
 def paraview_o():
     return make_response(jsonify({"sessionURL" : current_app.config["WSPATH"]}),200)
-
 
 @blueprint.route('/login', methods=["POST"])
 def login():
@@ -256,10 +274,11 @@ def login():
         return createAccount()
 
     uname = request.form.get("username").lower()
-    if userExists(uname) and check_password_hash(getUser(uname)["Password"], request.form.get("password")):
-        #launch_docker_container(uname, request.form.get("password"), current_app.config["DOCKER_IMAGE"])
+    user = getUser(uname)
+    if user is not None and user.check_password(request.form.get("password")):
         response = make_response(redirect("/containers"))
-        response.set_cookie('vnv-docker-login', GET_COOKIE_TOKEN(uname))
+        response.set_cookie('vnv-docker-login', user.get_cookie())
+        getDatabaseImpl().updateUser(user)
         return response
 
     return render_template("login.html", loginerror="Invalid Password", newuser=0)
@@ -267,13 +286,19 @@ def login():
 
 @blueprint.route('/logout', methods=["GET"])
 def logout():
-    # We do not proxy logout requests -- We just log the user out and stop
-    # there container. This is nice as it means the logout button in the container
-    # works (make sure?)
+
     response = make_response(redirect("/containers"))
-    if "hard" in request.args:
-        getUser(g.user).pop("Cookie")
+
+    if "superhard" in request.args:
+        g.user.remove_all_cookies()
+        getDatabaseImpl().updateUser(g.user)
         response.set_cookie('vnv-docker-login', "", expires=0)
+
+    elif "hard" in request.args:
+        g.user.remove_cookie(request.cookies.get("vnv-docker-login"))
+        getDatabaseImpl().updateUser(g.user)
+        response.set_cookie('vnv-docker-login', "", expires=0)
+
     response.set_cookie('vnv-docker-connect', "", expires=0)
     return response
 
@@ -294,8 +319,7 @@ def proxy(path):
     if containerId is None:
         return redirect("/containers")
 
-
-    container, theia, paraview = docker_container_ready(g.user,containerId)
+    container, theia, paraview = docker_container_ready(g.user.username,containerId)
 
     count = int(request.args.get("count", "0"))
 
@@ -345,17 +369,60 @@ def proxy(path):
             return response
         else:
             print("Unsupported Query sent to proxy")
+
     except Exception as e:
         return loading(count)
 
+def start_container_monitoring():
+
+    def monitor_containers():
+        remove_money = {}
+        for container in list_all_containers():
+            if container.status() == "running":
+                if container.user not in remove_money:
+                    remove_money[container.user] = container.price()
+                else:
+                    remove_money[container.user] += container.price()
+
+        getDatabaseImpl().update_money(remove_money)
+
+
+    def monitor_containers_forever():
+        ev = threading.Event()
+        while True:
+            monitor_containers()
+            ev.wait(60)
+
+    threading.Thread(target=monitor_containers_forever).start()
+
 
 def register(socketio, apps, config):
+
+    for k,v in config.DOCKER_IMAGES.items():
+        ALL_IMAGES[k] = Image(k,"N/A",v[0],v[1],False)
+        DEFAULT_IMAGES.append(k)
+
+    for k in config.DEFAULT_RESOURCES:
+        DEFAULT_RESOURCES.append(k)
+
+
+    global DATABASE_IMPL
+    DATABASE_IMPL = db.Configure(config)
+
     apps.register_blueprint(blueprint)
 
+    #Monitor the containers
+    start_container_monitoring()
+
+    #Register the default users.
+    for k, v in config.DEFAULT_USERS.items():
+        createUser(k, v["password"], v.get("admin", False), override=True)
+
+    #Forward all the socket connections.
     class SocketContainer:
         def __init__(self, pty, theia=False):
             self.pty = pty
-            self.user = g.user
+            self.user = g.user.username
             self.sock = None
             self.sid = request.sid
             self.theia = theia
@@ -363,7 +430,7 @@ def register(socketio, apps, config):
         def connect(self):
             if self.sock is None:
                 containerId = request.cookies.get("vnv-docker-connect")
-                container, theia, paraview = docker_container_ready(g.user, containerId)
+                container, theia, paraview = docker_container_ready(g.user.username, containerId)
 
                 # If theia then set the docker theia port instead.
                 container = theia if self.theia else container
@@ -403,7 +470,7 @@ def register(socketio, apps, config):
 
     def a_check_valid_login():
         check_valid_login()
-        return g.user
+        return g.user.username
 
         # Forward websocket to the paraview server.
 
@@ -436,7 +503,7 @@ def register(socketio, apps, config):
     def echo(ws):
         if a_check_valid_login():
             containerId = request.cookies.get("vnv-docker-connect")
-            container, theia, paraview = docker_container_ready(g.user, containerId)
+            container, theia, paraview = docker_container_ready(g.user.username, containerId)
             wsock = WSockApp(paraview, ws)
             wsock.serve()
             while wsock.running():
@@ -451,28 +518,28 @@ def register(socketio, apps, config):
         @socketio.on(f"{pty}-input", namespace=f"/{pty}")
         def pty_input(data):
             if a_check_valid_login() is not None:
-                if g.user in socks[pty]:
-                    socks[pty][g.user].to_docker_container(f"{pty}-input", data)
+                if g.user.username in socks[pty]:
+                    socks[pty][g.user.username].to_docker_container(f"{pty}-input", data)
 
         @socketio.on("resize", namespace=f"/{pty}")
         def pyresize(data):
             if a_check_valid_login() is not None:
-                if g.user in socks[pty]:
-                    socks[pty][g.user].to_docker_container(f"resize", data)
+                if g.user.username in socks[pty]:
+                    socks[pty][g.user.username].to_docker_container(f"resize", data)
 
         @socketio.on("connect", namespace=f"/{pty}")
         def pyconnect():
             if a_check_valid_login() is not None:
                 try:
-                    socks[pty][g.user] = SocketContainer(pty)
+                    socks[pty][g.user.username] = SocketContainer(pty)
                 except Exception as e:
                     print(e)
 
         @socketio.on("disconnect", namespace=f"/{pty}")
         def pydisconnect():
             if a_check_valid_login() is not None:
-                if g.user in socks[pty]:
-                    socks[pty].pop(g.user)
+                if g.user.username in socks[pty]:
+                    socks[pty].pop(g.user.username)
 
     wrap("pty")
     wrap("pypty")
@@ -480,16 +547,16 @@ def register(socketio, apps, config):
     @socketio.on("connect", namespace=f"/services")
     def theiaconnect(**kwargs):
         if a_check_valid_login() is not None:
-            socks["theia"][g.user] = SocketContainer("services", True)
+            socks["theia"][g.user.username] = SocketContainer("services", True)
 
     @socketio.on('message', namespace="/services")
     def catch_message(data, **kwargs):
         if a_check_valid_login() is not None:
-            if g.user in socks["theia"]:
-                socks["theia"][g.user].to_docker_container(f"message", data)
+            if g.user.username in socks["theia"]:
+                socks["theia"][g.user.username].to_docker_container(f"message", data)
 
     @socketio.on('disconnect', namespace="/services")
     def abcatch_disconnect(**kwargs):
         if a_check_valid_login() is not None:
-            if g.user in socks["theia"]:
-                socks["theia"].pop(g.user)
+            if g.user.username in socks["theia"]:
+                socks["theia"].pop(g.user.username)

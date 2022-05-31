@@ -13,14 +13,17 @@ from app.serve.container import __execute_command__, image_exists
 class Config:
     DEBUG=False
     port = 5001
-    DEFAULT_USERS= {"Admin" : {"password" : "Admin", "admin" : True}}
-    THEIA_FORWARDS = []
-    DOCKER_IMAGES = {}
+
+    DEFAULT_USERS = {"Admin": {"password": "Admin", "admin": True}}
+    DOCKER_IMAGES = {"vnv_demo:latest" : ["VnV Demo Examples" , "A Set of Simple VnV Examples"]}
+    DEFAULT_RESOURCES = ["basic"]
     ALLOW_NEW_USERS = True
     AUTHORIZATION_CODES = ["Trial"]
     HOST = "0.0.0.0"
     WSPATH = f"ws://{HOST}:{port}/ws"
     HOSTCORS = f"http://localhost:{port}"
+
+    MONGO_CONFIG = {"drop":True}
 
 app_config = Config()
 

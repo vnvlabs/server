@@ -2,7 +2,7 @@ import json
 
 import docker
 
-from .common import CommonImpl, Container, bdec, Image, benc
+from src.app.serve.resource import benc, Container, bdec, Image
 
 
 class DockerImplementation:
@@ -19,6 +19,15 @@ class DockerImplementation:
             return True
         except:
             return False
+
+    @classmethod
+    def get_container(cls,container_id):
+        c = cls.docker_client.containers.get(container_id)
+        if c is not None:
+            co = Container.from_json(json.loads(c.labels["vnv-container-info"]))
+            co.status_ = c.status
+            return co,c
+        return None
 
     @classmethod
     def status(cls, container_id):
@@ -50,40 +59,46 @@ class DockerImplementation:
             return None
 
     @classmethod
-    def stop_(cls, container_id):
-        c = cls.docker_client.containers.get(container_id)
-        c.stop()
+    def stop_(cls, container_id, username):
+        cont,c  = cls.get_container(container_id)
+        if cont is not None and cont.user == username:
+            c.stop(timeout=0)
 
     @classmethod
-    def start_(cls, container_id):
-        c = cls.docker_client.containers.get(container_id)
-        c.start()
+    def start_(cls, container_id, username):
+        cont, c = cls.get_container(container_id)
+        if cont is not None and cont.user == username:
+            c.start()
 
     @classmethod
-    def delete_(cls, container_id):
-        c = cls.docker_client.containers.get(container_id)
-        c.stop()
-        c.remove(force=True, v=False)
+    def delete_(cls, container_id, username):
+        cont, c = cls.get_container(container_id)
+        if cont is not None and cont.user == username:
+            c.stop(timeout=0)
+            c.remove(force=True, v=False)
 
     @classmethod
-    def delete_image_(cls, image_id):
-        c = cls.docker_client.images.remove(image_id)
+    def delete_image_(cls, image_id,username):
+        img = cls.get_image(image_id)
+        if img is not None and img.user == username:
+            cls.docker_client.images.remove(image_id)
 
     @classmethod
-    def snapshot_(cls, container_id, image):
-        newlabel = 'LABEL vnv-image-info="' + benc(image.to_json()) + '"\nLABEL vnv-container-info=""'
-        c = cls.docker_client.containers.get(container_id)
-        i = c.commit(image.id, changes=newlabel)
+    def snapshot_(cls, container_id, image, username):
+        cont, c = cls.get_container(container_id)
+        if cont is not None and cont.user == username:
+            newlabel = 'LABEL vnv-image-info="' + benc(image.to_json()) + '"\nLABEL vnv-container-info=""'
+            c.commit(image.id, changes=newlabel)
 
     @classmethod
-    def ready_(cls, container_id):
+    def ready_(cls, container_id, username):
 
-        try:
-            c = cls.docker_client.containers.get(container_id)
-            return c.ports['5001/tcp'][0]["HostPort"], c.ports['3000/tcp'][0]["HostPort"], c.ports["9000/tcp"][0][
-                "HostPort"]
-        except:
-            pass
+        cont, c = cls.get_container(container_id)
+        if cont is not None and cont.user == username:
+            try:
+                return c.ports['5001/tcp'][0]["HostPort"], c.ports['3000/tcp'][0]["HostPort"], c.ports["9000/tcp"][0]["HostPort"]
+            except:
+                pass
 
         return None, None, None
 
@@ -97,6 +112,21 @@ class DockerImplementation:
         return containers
 
     @classmethod
+    def list_user_containers(cls, username):
+       return [ c for c in cls.list_containers() if c.user == username ]
+
+    @classmethod
+    def list_user_images(cls, username):
+       return [ c for c in cls.list_images() if c.user == username ]
+
+    @classmethod
+    def get_image(cls, image_id):
+        image = cls.docker_client.images.get(image_id)
+        b64 = image.labels["vnv-image-info"]
+        inf = json.loads(bdec(b64))
+        return Image.from_json(inf)
+
+    @classmethod
     def list_images(cls):
         docker_images = cls.docker_client.images.list(all=True, filters={"label": "vnv-image-info"})
         images = []
@@ -105,3 +135,4 @@ class DockerImplementation:
             inf = json.loads(bdec(b64))
             images.append(Image.from_json(inf))
         return images
+

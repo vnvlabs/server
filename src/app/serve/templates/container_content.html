@@ -30,10 +30,14 @@
                 <td style="vertical-align:middle;">{{container.desc}}</td>
                 <td style="vertical-align:middle;">{{container.image}}</td>
                 <td style="vertical-align:middle;">{{container.resource.name}}</td>
-                <td style="vertical-align:middle;">{{container.status()}}</td>
+                {% if container.id == stopped_id %}
+                    <td style="vertical-align:middle;">stopping</td>
+                {%else%}
+                    <td style="vertical-align:middle;">{{container.status()}}</td>
+                {%endif%}
                 <td>
                   <div style="display:flex; justify-content:flex-end">
-                    {%if container.status() == "running" %}
+                    {%if container.status() == "running" and container.id != stopped_id %}
                         <button class="btn btn-primary" style="margin-left:10px;" onclick="connect_to_container('{{container.id}}')" >Connect</button>
                         <button class="btn btn-primary" style="margin-left:10px;" onclick="stop_container('{{container.id}}')" >Stop</button>
                     {%else%}
@@ -85,3 +89,9 @@
         </table>
     </div>
 </div>
+
+{% if message is not none and message | length > 0  %}
+<script>
+    alert("{{message}}")
+</script>
+{% endif %}
