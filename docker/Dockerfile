@@ -5,5 +5,5 @@ COPY . /serve
 
 WORKDIR /serve
 RUN virtualenv --python=python3 virt && virt/bin/pip install -r requirements.txt
-ENTRYPOINT ["virt/bin/python", "src/run.py"]
-CMD["config.json"]
+ENTRYPOINT ["virt/bin/python3", "src/run.py"]
+CMD ["config/config.json"]

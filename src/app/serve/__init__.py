@@ -13,14 +13,14 @@ from werkzeug.utils import redirect
 import docker
 from flask_sock import Sock
 
-from src.app.serve.container import list_user_images, list_user_containers, create_docker_container, \
-    delete_docker_container, \
+from app.serve.container import list_user_images, list_user_containers, create_docker_container, \
+    delete_docker_container, pull_image \
     delete_docker_image, start_docker_container, create_docker_image, stop_docker_container, list_all_containers, \
     docker_container_ready, user_owns_image, ALL_RESOURCES
 
-from src.app.serve.container import list_all_containers
-from src.app.serve.resource import Container, Image, Resource
-from src.app.serve.users import db
+from app.serve.container import list_all_containers
+from app.serve.resource import Container, Image, Resource
+from app.serve.users import db
 
 docker_client = docker.from_env()
 
@@ -401,6 +401,11 @@ def register(socketio, apps, config):
     for k,v in config.DOCKER_IMAGES.items():
         ALL_IMAGES[k] = Image(k,"N/A",v[0],v[1],False)
         DEFAULT_IMAGES.append(k)
+        f = k.split(":")
+        repo = f[0]
+        tag = f[1] if len(f) > 1 else None
+        print("Pulling image")
+        pull_image(repo,tag,False)
 
     for k in config.DEFAULT_RESOURCES:
         DEFAULT_RESOURCES.append(k)
@@ -416,7 +421,15 @@ def register(socketio, apps, config):
 
     #Register the default users.
     for k, v in config.DEFAULT_USERS.items():
-        createUser(k, v["password"], v.get("admin", False), override=True)
+        p = uuid.uuid4().hex[0:9]
+        s = createUser(k, p, v.get("admin", False), override=True)
+        if isinstance(s,str):
+            print(s)
+        else:
+            print("Created user ",k, " with password ", p)
+
+    # Pull all the docker images:
+
 
     #Forward all the socket connections.
     class SocketContainer:

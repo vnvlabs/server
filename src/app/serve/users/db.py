@@ -1,6 +1,6 @@
-from src.app.serve.users.memory import InMemoryUserManagement
-from src.app.serve.users.mongo import MongoUserManagement
-from src.app.serve.users.user import User
+from app.serve.users.memory import InMemoryUserManagement
+from app.serve.users.mongo import MongoUserManagement
+from app.serve.users.user import User
 
 
 class DBImpl:

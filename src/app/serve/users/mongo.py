@@ -1,6 +1,6 @@
 import pymongo
 
-from src.app.serve.users.user import User
+from app.serve.users.user import User
 
 
 class MongoUserManagement:
@@ -57,7 +57,7 @@ class MongoUserManagement:
         self.users.replace_one(filter={"username":user.username}, replacement=user.tojson())
 
     #TODO Paginate
-    def list_users(self) -> list[User]:
+    def list_users(self) -> list:
         return [User.fromjson(j) for j in self.users.find()]
 
     #TODO Bulk operation

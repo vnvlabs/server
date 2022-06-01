@@ -25,7 +25,7 @@ def get_volume_info(user):
 def list_user_containers(username):
     return set_container_status(ContainerImplementation.list_user_containers(username))
 
-def list_user_images(username) -> list[Image] :
+def list_user_images(username) -> list :
     return ContainerImplementation.list_user_images(username)
 
 def user_owns_image(image, username):
@@ -33,6 +33,12 @@ def user_owns_image(image, username):
         if im.id == image:
             return True
     return False
+
+def pull_image(repo,tag=None, sync=False):
+    if sync:
+        ContainerImplementation.pull(repo,tag)
+    else:
+        threading.Thread(target=ContainerImplementation.pull, args=[repo, tag]).start()
 
 
 def create_docker_container(uname, name, image, resource, image_desc):

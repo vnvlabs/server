@@ -2,11 +2,15 @@ import json
 
 import docker
 
-from src.app.serve.resource import benc, Container, bdec, Image
+from app.serve.resource import benc, Container, bdec, Image
 
 
 class DockerImplementation:
     docker_client = docker.from_env()
+
+    @classmethod
+    def pull(cls, repo, tag=None):
+        return cls.docker_client.images.pull(repository=repo,tag=tag)
 
     @classmethod
     def execute(cls, image, command):

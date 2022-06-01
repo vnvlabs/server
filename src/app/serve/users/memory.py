@@ -1,4 +1,4 @@
-from src.app.serve.users.user import User
+from app.serve.users.user import User
 
 
 class InMemoryUserManagement:
@@ -31,7 +31,7 @@ class InMemoryUserManagement:
     def update_user(self, user: User):
         self.users[user.username] = user
 
-    def list_users(self) -> list[User]:
+    def list_users(self) -> list:
         return list(self.users.values())
 
     def update_money(self, amounts):

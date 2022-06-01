@@ -5,4 +5,5 @@ python-socketio[Client]
 flask-sock
 websockets
 websocket-client
+pymongo
 asyncio
