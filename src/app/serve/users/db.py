@@ -39,6 +39,6 @@ class DBImpl:
 def Configure(config) -> DBImpl:
     try:
         return DBImpl(MongoUserManagement(config.MONGO_CONFIG))
-    except:
-        print("Could not connect to the mongo server -- launching with in memory db instead")
+    except Exception as e:
+        print("Could not connect to the mongo server -- launching with in memory db instead ", e)
     return DBImpl(InMemoryUserManagement(config))

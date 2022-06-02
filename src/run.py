@@ -7,7 +7,7 @@ import sys,json
 import os
 import shutil
 
-from app.serve.container import __execute_command__, image_exists
+from app.serve.container import __execute_command__, image_exists, pull_image
 
 
 class Config:
@@ -23,7 +23,7 @@ class Config:
     WSPATH = f"ws://{HOST}:{port}/ws"
     HOSTCORS = f"http://localhost:{port}"
 
-    MONGO_CONFIG = {"drop":True}
+    MONGO_CONFIG = {"drop":False}
 
 app_config = Config()
 
@@ -35,7 +35,15 @@ with open(sys.argv[1],'r') as c:
         except Exception as e:
             print(e, "Could not configure option ", k, v)
 
-# Delete any images that dont work
+
+for k,v in app_config.DOCKER_IMAGES.items():
+        f = k.split(":")
+        repo = f[0]
+        tag = f[1] if len(f) > 1 else None
+        print("Pulling image ", k)
+        pull_image(repo,tag,True)
+
+
 fkeys = [k for k in app_config.DOCKER_IMAGES.keys() if not image_exists(k)]
 for k in fkeys:
     print("Image ", k, " could not be found")
