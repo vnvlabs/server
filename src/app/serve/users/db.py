@@ -14,8 +14,8 @@ class DBImpl:
     def deleteAuthcode(self, authcode):
         self.impl.delete_authcode(authcode)
 
-    def validateAuthCode(self, authcode):
-        return self.impl.Implementation.valid_auth_code(authcode)
+    def validateAuthcode(self, authcode):
+        return self.impl.valid_auth_code(authcode)
 
     def createUser(self, username, raw_password, resources, images, admin=False) -> User:
         return self.impl.create_user(User(username, raw_password, admin, resources=resources, images=images))

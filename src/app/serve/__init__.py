@@ -166,7 +166,7 @@ def container_management():
                            balance=g.user.balance,
                            resources=list_available_resources(g.user),
                            images=list_available_images(g.user),
-                           containers=list_user_containers(g.user.username),
+                           containers=list_user_containers(g.user.uid),
                            message=None,
                            stopped_id=None
                            )
@@ -179,14 +179,14 @@ def list_available_resources(user):
    return [ ALL_RESOURCES[r] for r in user.resources ]
 
 def list_available_images(user):
-    return [ ALL_IMAGES[r] for r in user.images  ] + list_user_images(user.username)
+    return [ ALL_IMAGES[r] for r in user.images  ] + list_user_images(user.uid)
 
 def container_management_content(message=None, stopped_id=None):
     return render_template("container_content.html",
                            balance=g.user.balance,
                            resources=list_available_resources(g.user),
                            images=list_available_images(g.user),
-                           containers=list_user_containers(g.user.username),
+                           containers=list_user_containers(g.user.uid),
                            message=message,
                            stopped_id = stopped_id
                            )
@@ -201,33 +201,33 @@ def create_container():
     if g.user.has_resource(resource):
 
         if not image in g.user.images:
-            if not user_owns_image(image,g.user.username):
+            if not user_owns_image(image,g.user.uid):
                 return make_response("invalid container config", 400)
 
         desc = request.form.get("desc","No description available")
-        create_docker_container(g.user.username, name, image, ALL_RESOURCES[resource], desc )
+        create_docker_container(g.user.uid, name, image, ALL_RESOURCES[resource], desc )
         return make_response(redirect("/containers"),302)
 
     return make_response("invalid container config", 400)
 
 @blueprint.route('/container/stop/<cid>', methods=["POST"])
 def stop_container(cid):
-    stop_docker_container(g.user.username, cid)
+    stop_docker_container(g.user.uid, cid)
     return container_management_content(None, cid)
 
 @blueprint.route('/container/start/<cid>', methods=["POST"])
 def start_container(cid):
-    start_docker_container(g.user.username, cid)
+    start_docker_container(g.user.uid, cid)
     return container_management_content()
 
 @blueprint.route('/container/delete/<cid>', methods=["POST"])
 def delete_container(cid):
-    delete_docker_container(g.user.username,cid)
+    delete_docker_container(g.user.uid,cid)
     return container_management_content()
 
 @blueprint.route('/container/connect/<cid>', methods=["GET"])
 def connect_to_container(cid):
-    start_docker_container(g.user.username, cid)
+    start_docker_container(g.user.uid, cid)
     response = make_response(redirect("/"))
     response.set_cookie('vnv-docker-connect', cid)
     return response
@@ -235,13 +235,13 @@ def connect_to_container(cid):
 @blueprint.route('/container/snapshot', methods=["POST"])
 def create_image():
     cid = request.form.get("id")
-    create_docker_image(g.user.username, cid, request.form.get("name"), request.form.get("description"))
+    create_docker_image(g.user.uid, cid, request.form.get("name"), request.form.get("description"))
     return make_response(redirect("/containers"))
 
 
 @blueprint.route('/container/delete_image/<cid>', methods=["POST"])
 def delete_image(cid):
-    delete_docker_image(g.user.username, cid)
+    delete_docker_image(g.user.uid, cid)
     return container_management_content()
 
 @blueprint.route('/container/balance', methods=["GET"])
@@ -319,7 +319,7 @@ def proxy(path):
     if containerId is None:
         return redirect("/containers")
 
-    container, theia, paraview = docker_container_ready(g.user.username,containerId)
+    container, theia, paraview = docker_container_ready(g.user.uid,containerId)
 
     count = int(request.args.get("count", "0"))
 
@@ -409,6 +409,9 @@ def register(socketio, apps, config):
     global DATABASE_IMPL
     DATABASE_IMPL = db.Configure(config)
 
+    for i in config.AUTHORIZATION_CODES:
+        getDatabaseImpl().createAuthcode(i)
+
     apps.register_blueprint(blueprint)
 
     #Monitor the containers
@@ -430,7 +433,7 @@ def register(socketio, apps, config):
     class SocketContainer:
         def __init__(self, pty, theia=False):
             self.pty = pty
-            self.user = g.user.username
+            self.user = g.user.uid
             self.sock = None
             self.sid = request.sid
             self.theia = theia
@@ -438,7 +441,7 @@ def register(socketio, apps, config):
         def connect(self):
             if self.sock is None:
                 containerId = request.cookies.get("vnv-docker-connect")
-                container, theia, paraview = docker_container_ready(g.user.username, containerId)
+                container, theia, paraview = docker_container_ready(g.user.uid, containerId)
 
                 # If theia then set the docker theia port instead.
                 container = theia if self.theia else container
@@ -477,8 +480,7 @@ def register(socketio, apps, config):
     }
 
     def a_check_valid_login():
-        check_valid_login()
-        return g.user.username
+        return verify_cookie(request.cookies.get("vnv-docker-login"))
 
         # Forward websocket to the paraview server.
 
@@ -511,7 +513,7 @@ def register(socketio, apps, config):
     def echo(ws):
         if a_check_valid_login():
             containerId = request.cookies.get("vnv-docker-connect")
-            container, theia, paraview = docker_container_ready(g.user.username, containerId)
+            container, theia, paraview = docker_container_ready(g.user.uid, containerId)
             wsock = WSockApp(paraview, ws)
             wsock.serve()
             while wsock.running():
@@ -525,46 +527,46 @@ def register(socketio, apps, config):
 
         @socketio.on(f"{pty}-input", namespace=f"/{pty}")
         def pty_input(data):
-            if a_check_valid_login() is not None:
-                if g.user.username in socks[pty]:
-                    socks[pty][g.user.username].to_docker_container(f"{pty}-input", data)
+            if a_check_valid_login():
+                if g.user.uid in socks[pty]:
+                    socks[pty][g.user.uid].to_docker_container(f"{pty}-input", data)
 
         @socketio.on("resize", namespace=f"/{pty}")
         def pyresize(data):
-            if a_check_valid_login() is not None:
-                if g.user.username in socks[pty]:
-                    socks[pty][g.user.username].to_docker_container(f"resize", data)
+            if a_check_valid_login():
+                if g.user.uid in socks[pty]:
+                    socks[pty][g.user.uid].to_docker_container(f"resize", data)
 
         @socketio.on("connect", namespace=f"/{pty}")
         def pyconnect():
-            if a_check_valid_login() is not None:
+            if a_check_valid_login() :
                 try:
-                    socks[pty][g.user.username] = SocketContainer(pty)
+                    socks[pty][g.user.uid] = SocketContainer(pty)
                 except Exception as e:
                     print(e)
 
         @socketio.on("disconnect", namespace=f"/{pty}")
         def pydisconnect():
-            if a_check_valid_login() is not None:
-                if g.user.username in socks[pty]:
-                    socks[pty].pop(g.user.username)
+            if a_check_valid_login():
+                if g.user.uid in socks[pty]:
+                    socks[pty].pop(g.user.uid)
 
     wrap("pty")
     wrap("pypty")
 
     @socketio.on("connect", namespace=f"/services")
     def theiaconnect(**kwargs):
-        if a_check_valid_login() is not None:
-            socks["theia"][g.user.username] = SocketContainer("services", True)
+        if a_check_valid_login():
+            socks["theia"][g.user.uid] = SocketContainer("services", True)
 
     @socketio.on('message', namespace="/services")
     def catch_message(data, **kwargs):
-        if a_check_valid_login() is not None:
-            if g.user.username in socks["theia"]:
-                socks["theia"][g.user.username].to_docker_container(f"message", data)
+        if a_check_valid_login():
+            if g.user.uid in socks["theia"]:
+                socks["theia"][g.user.uid].to_docker_container(f"message", data)
 
     @socketio.on('disconnect', namespace="/services")
     def abcatch_disconnect(**kwargs):
-        if a_check_valid_login() is not None:
-            if g.user.username in socks["theia"]:
-                socks["theia"].pop(g.user.username)
+        if a_check_valid_login():
+            if g.user.uid in socks["theia"]:
+                socks["theia"].pop(g.user.uid)

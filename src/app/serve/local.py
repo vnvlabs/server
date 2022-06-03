@@ -41,8 +41,8 @@ class DockerImplementation:
             return "invalid"
 
     @classmethod
-    def create_volume(cls, username):
-        volname = "vnv-volume-"+username
+    def create_volume(cls, uid):
+        volname = "vnv-volume-"+uid
         try:
             cls.docker_client.volumes.get(volname)
         except:
@@ -63,42 +63,42 @@ class DockerImplementation:
             return None
 
     @classmethod
-    def stop_(cls, container_id, username):
+    def stop_(cls, container_id, uid):
         cont,c  = cls.get_container(container_id)
-        if cont is not None and cont.user == username:
+        if cont is not None and cont.user == uid:
             c.stop(timeout=0)
 
     @classmethod
-    def start_(cls, container_id, username):
+    def start_(cls, container_id, uid):
         cont, c = cls.get_container(container_id)
-        if cont is not None and cont.user == username:
+        if cont is not None and cont.user == uid:
             c.start()
 
     @classmethod
-    def delete_(cls, container_id, username):
+    def delete_(cls, container_id, uid):
         cont, c = cls.get_container(container_id)
-        if cont is not None and cont.user == username:
+        if cont is not None and cont.user == uid:
             c.stop(timeout=0)
             c.remove(force=True, v=False)
 
     @classmethod
-    def delete_image_(cls, image_id,username):
+    def delete_image_(cls, image_id,uid):
         img = cls.get_image(image_id)
-        if img is not None and img.user == username:
+        if img is not None and img.user == uid:
             cls.docker_client.images.remove(image_id)
 
     @classmethod
-    def snapshot_(cls, container_id, image, username):
+    def snapshot_(cls, container_id, image, uid):
         cont, c = cls.get_container(container_id)
-        if cont is not None and cont.user == username:
+        if cont is not None and cont.user == uid:
             newlabel = 'LABEL vnv-image-info="' + benc(image.to_json()) + '"\nLABEL vnv-container-info=""'
             c.commit(image.id, changes=newlabel)
 
     @classmethod
-    def ready_(cls, container_id, username):
+    def ready_(cls, container_id, uid):
 
         cont, c = cls.get_container(container_id)
-        if cont is not None and cont.user == username:
+        if cont is not None and cont.user == uid:
             try:
                 return c.ports['5001/tcp'][0]["HostPort"], c.ports['3000/tcp'][0]["HostPort"], c.ports["9000/tcp"][0]["HostPort"]
             except:
@@ -116,12 +116,12 @@ class DockerImplementation:
         return containers
 
     @classmethod
-    def list_user_containers(cls, username):
-       return [ c for c in cls.list_containers() if c.user == username ]
+    def list_user_containers(cls, uid):
+       return [ c for c in cls.list_containers() if c.user == uid ]
 
     @classmethod
-    def list_user_images(cls, username):
-       return [ c for c in cls.list_images() if c.user == username ]
+    def list_user_images(cls, uid):
+       return [ c for c in cls.list_images() if c.user == uid ]
 
     @classmethod
     def get_image(cls, image_id):

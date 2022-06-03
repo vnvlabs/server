@@ -20,16 +20,16 @@ def set_container_status(container):
 
 
 def get_volume_info(user):
-    return ContainerImplementation.get_volume_info(user.username)
+    return ContainerImplementation.get_volume_info(user.uid)
 
-def list_user_containers(username):
-    return set_container_status(ContainerImplementation.list_user_containers(username))
+def list_user_containers(uid):
+    return set_container_status(ContainerImplementation.list_user_containers(uid))
 
-def list_user_images(username) -> list :
-    return ContainerImplementation.list_user_images(username)
+def list_user_images(uid) -> list :
+    return ContainerImplementation.list_user_images(uid)
 
-def user_owns_image(image, username):
-    for im in list_user_images(username):
+def user_owns_image(image, uid):
+    for im in list_user_images(uid):
         if im.id == image:
             return True
     return False
@@ -51,42 +51,42 @@ def create_docker_container(uname, name, image, resource, image_desc):
     except Exception as e :
         pass
 
-def stop_docker_container(username, container_id):
+def stop_docker_container(uid, container_id):
     try:
-        threading.Thread(target=ContainerImplementation.stop_, args=[container_id, username]).start()
+        threading.Thread(target=ContainerImplementation.stop_, args=[container_id, uid]).start()
     except:
         pass
 
 
-def start_docker_container(username, container_id):
+def start_docker_container(uid, container_id):
     try:
-        threading.Thread(target=ContainerImplementation.start_, args=[container_id, username]).start()
+        threading.Thread(target=ContainerImplementation.start_, args=[container_id, uid]).start()
     except Exception as e:
         pass
 
 
-def delete_docker_container(username, container_id):
+def delete_docker_container(uid, container_id):
     try:
-        threading.Thread(target=ContainerImplementation.delete_, args=[container_id, username]).start()
+        threading.Thread(target=ContainerImplementation.delete_, args=[container_id, uid]).start()
     except:
         pass
 
-def create_docker_image(username, container_id, name, desc):
+def create_docker_image(uid, container_id, name, desc):
     try:
         new_image_id = "vnv-" + uuid.uuid4().hex
-        image = Image(new_image_id,username,name,desc,True)
-        threading.Thread(target=ContainerImplementation.snapshot_, args=[container_id, image, username]).start()
+        image = Image(new_image_id,uid,name,desc,True)
+        threading.Thread(target=ContainerImplementation.snapshot_, args=[container_id, image, uid]).start()
     except:
         pass
 
-def delete_docker_image(username, image_id):
+def delete_docker_image(uid, image_id):
     try:
-       threading.Thread(target=ContainerImplementation.delete_image_, args=[image_id, username]).start()
+       threading.Thread(target=ContainerImplementation.delete_image_, args=[image_id, uid]).start()
     except:
         pass
 
-def docker_container_ready(username, container_id):
-    return ContainerImplementation.ready_(container_id, username)
+def docker_container_ready(uid, container_id):
+    return ContainerImplementation.ready_(container_id, uid)
 
 
 ### DONT LET A USER USER THIS FUNCTION

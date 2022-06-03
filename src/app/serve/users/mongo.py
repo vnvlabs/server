@@ -33,7 +33,7 @@ class MongoUserManagement:
         return self.codes.find_one(filter={"value":code}) is not None
 
     def create_authcode(self, code: str):
-        self.codes.insert_one(filter={"value" : code})
+        self.codes.insert_one({"value" : code})
 
     def delete_authcode(self, code: str):
         self.codes.delete_one(filter={"value":code})

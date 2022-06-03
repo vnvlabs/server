@@ -12,6 +12,7 @@ class User:
         self.balance = balance
         self.resources = resources
         self.images = images
+        self.uid = kwargs["uid"] if "uid" in kwargs else uuid.uuid4().hex[0:8]
 
 
     def tojson(self):
@@ -21,7 +22,8 @@ class User:
                 "cookies":self.cookies,
                 "balance":self.balance,
                 "resources": self.resources,
-                "images" : self.images
+                "images" : self.images,
+                "uid" : self.uid
                 }
 
     @classmethod
