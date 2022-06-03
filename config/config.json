@@ -1,6 +1,6 @@
 {
 	"port" : 5001,
-	"DEBUG" : false,
+	"DEBUG" : true,
 	"DEFAULT_USERS" : {
 		"Admin" : { "admin" : true}
 	},

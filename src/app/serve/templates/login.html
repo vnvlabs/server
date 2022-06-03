@@ -4,88 +4,162 @@
 
 {% block content %}
 
-	<!-- [ auth-signin ] start -->
-	<div class="auth-wrapper">
-		<div class="auth-content">
-			<div class="card">
-				<div class="row align-items-center text-center">
-					<div class="col-md-12">
-						<div class="card-body" style="padding-bottom:0">
+<div style="position:absolute; top:10px; right:10px; z-index:10;">
+    <a href="mailto:boneill@rnet-tech.com"><i class="feather icon-mail"
+                                              style="margin-left:10px; color:white; font-size:40px; cursor:pointer;"></i></a>
 
-							<img src="/flask_static/assets/images/logo-dark.png" alt="" class="img-fluid mb-4">
-							<form action="/login" method="post" id="loginform">
-                            	<h4 class="mb-3 f-w-400">
-                               		{% if loginerror %}
-										{{loginerror}}
-									{%else%}
+    <a href="youtube.com"><i class="feather icon-help-circle"
+                             style="margin-left:10px; color:white; font-size:40px; cursor:pointer;"></i></a>
 
-									{%endif%}
-								</h4>
+    <a href="https://github.com/vnvlabs"><i class="feather icon-github"
+                                            style="color:white;margin-left:10px; font-size:40px; cursor:pointer;"></i></a>
+
+</div>
+
+<div class="demobutton" onclick="show_demo()">
+    DEMO
+</div>
+
+
+<script>
+function show_demo() {
+    $('#terminal-modal').modal('show')
+}
+
+</script>
+
+<!-- [ auth-signin ] start -->
+<div class="auth-wrapper"; style="flex-direction:column;">
+
+    <div class="thetitle">
+        <div class="maintitle" style="">
+            VnVLabs.com
+        </div>
+        <div class="subtitle">
+            <div>Scientific Simulation as a Service</div>
+        </div>
+
+    </div>
+    <div style="flex:1; display:flex;align-items:center; margin-bottom:40px; justify-content:center;">
+
+        <div class="auth-content">
+
+
+            <div class="card">
+                <div class="row align-items-center text-center">
+                    <div class="col-md-12">
+                        <div class="card-body" style="padding-bottom:0">
+
+
+                            <form action="/login" method="post" id="loginform">
+                                <h4 class="mb-3 f-w-400">
+                                    {% if loginerror %}
+                                    {{loginerror}}
+                                    {%else%}
+                                    Login to get Started!
+                                    {%endif%}
+                                </h4>
 
                                 <div class="form-group">
-                                     <input name="username" type="text" class="form-control" id="vnv-username" placeholder="Enter your username" value="">
+                                    <input name="username" type="text" class="form-control" id="vnv-username"
+                                           placeholder="Enter your username" value="">
                                 </div>
 
-								<div class="form-group">
-                                     <input name="password" type="password" class="form-control" id="vnv-pass" placeholder="Enter the Password" value="">
+                                <div class="form-group">
+                                    <input name="password" type="password" class="form-control" id="vnv-pass"
+                                           placeholder="Enter the Password" value="">
                                 </div>
-								<input type="text" hidden readonly name="next" value="{{next}}">
+                                <input type="text" hidden readonly name="next" value="{{next}}">
                                 <button type="submit" style="width:100%" class="btn btn-primary">Login</button>
 
-								<div class="form-group"style="margin-top:30px; margin-bottom:0px; display:flex; justify-content:space-between">
-									<a href="#" onclick="toggleNewAccount(true)"> Need an account? </a>
-									<a href="mailto:boneill@rnet-tech.com?subject=Help!, I Forgot My Password" > Forgot Password? </a>
+                                <div class="form-group"
+                                     style="margin-top:30px; margin-bottom:0px; display:flex; justify-content:space-between">
+                                    <a href="#" onclick="toggleNewAccount(true)"> Need an account? </a>
+                                    <a href="mailto:boneill@rnet-tech.com?subject=Help!, I Forgot My Password"> Forgot
+                                        Password? </a>
 
-								</div>
+                                </div>
 
-								<div class="form-group"style="margin-top:30px; margin-bottom:0px;">
-								</div>
+                                <div class="form-group" style="margin-top:30px; margin-bottom:0px;">
+                                </div>
 
-							</form>
+                            </form>
 
-							<form action="/login" method="post" id="newform">
-                            	<h4 class="mb-3 f-w-400">
-                               		{% if newerror %}
-										{{newerror}}
-									{%else%}
-                                		Create A New Account!
-									{%endif%}
-								</h4>
+                            <form action="/login" method="post" id="newform">
+                                <h4 class="mb-3 f-w-400">
+                                    {% if newerror %}
+                                    {{newerror}}
+                                    {%else%}
+                                    Create A New Account!
+                                    {%endif%}
+                                </h4>
 
                                 <div class="form-group">
-                                     <input name="username" type="text" class="form-control" id="vnv-ausername" placeholder="Enter your username" value="">
+                                    <input name="username" type="text" class="form-control" id="vnv-ausername"
+                                           placeholder="Enter your username" value="">
                                 </div>
 
-								<div class="form-group">
-                                     <input name="password" type="password" class="form-control" id="vnv-apass" placeholder="Enter the Password" value="">
+                                <div class="form-group">
+                                    <input name="password" type="password" class="form-control" id="vnv-apass"
+                                           placeholder="Enter the Password" value="">
                                 </div>
-								<div class="form-group">
-                                     <input name="auth" type="text" class="form-control" id="vnv-aauth" placeholder="Enter your Authorization Code" value="">
+                                <div class="form-group">
+                                    <input name="auth" type="text" class="form-control" id="vnv-aauth"
+                                           placeholder="Enter your Authorization Code" value="">
                                 </div>
 
-								<input type="text" hidden readonly name="next" value="{{next}}">
+                                <input type="text" hidden readonly name="next" value="{{next}}">
                                 <button type="submit" style="width:100%" class="btn btn-primary">Create Account</button>
 
-								<div class="form-group" style="margin-top:30px; margin-bottom:0px;">
-									<a href="#" onclick="toggleNewAccount(false)"> Already have an account? </a>
-								</div>
+                                <div class="form-group"
+                                     style="margin-top:30px; margin-bottom:0px; display:flex; justify-content:space-between">
+                                    <a href="#" onclick="toggleNewAccount(false)"> Back to login? </a>
+                                    <a href="mailto:boneill@rnet-tech.com?subject=VnV Code"> Need a Code? </a>
 
-							</form>
-						</div>
-					</div>
-				</div>
-			</div>
-		</div>
-	</div>
+                                </div>
 
-	<script>
+                                <div class="form-group" style="margin-top:30px; margin-bottom:0px;">
+                                </div>
+
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div>
+
+</div>
+
+<script>
 		function toggleNewAccount(sh) {
 			$('#loginform').toggle(sh==0)
 			$('#newform').toggle(sh!=0)
 		}
 		toggleNewAccount({{newuser}})
-	</script>
-	<!-- [ auth-signin ] end -->
+
+
+</script>
+<!-- [ auth-signin ] end -->
 
 {% endblock content %}
 
+{%block modals %}
+
+<div id="terminal-modal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="terminal-modal-label"
+     aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:unset; justify-content:center;" role="document">
+        <div class="modal-content" style='width:95vw; padding:6px;'>
+
+            <video controls width="100%" frameborder="0" allowfullscreen>
+                <source src="/flask_static/assets/images/demo.mp4" type="video/mp4">
+                Hmmmm
+            </video>
+        </div>
+    </div>
+</div>
+
+{%endblock%}

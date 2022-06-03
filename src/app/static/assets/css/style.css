@@ -107,6 +107,77 @@ margin:10px;
 margin:10px;
 }
 
+.thetitle {
+    padding: 10px;
+    top:100px;
+    margin-top:30px;
+    font-size:40px;
+    color:white;
+    z-index:100 !important;
+}
+
+.demobutton {
+    position: absolute;
+    bottom: 117px;
+    right: 74px;
+    z-index: 10 !important;
+    width: 200px;
+    height: 150px;
+
+    border-radius: 43%;
+    border: 6px solid white;
+    margin: 0px;
+    color: white;
+    font-size: 40px;
+    transform: rotate(-34deg);
+    font-family: 'Special Elite';
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+}
+
+.subtitle {
+    font-family: monospace;
+    font-size:1.15rem;
+    margin-top:10px;
+    margin-right:10px;
+    text-align:right;
+    width:100%;
+}
+
+
+
+.maintitle {
+    font-family: 'Special Elite';
+    font-size:clamp(3rem, 0.4242rem + 12.1212vw, 8rem);
+    height: clamp(3rem, 0.4242rem + 12.1212vw, 8rem); text
+}
+
+.decorated{
+     overflow: hidden;
+     text-align: center;
+ }
+.decorated > span{
+    position: relative;
+    display: inline-block;
+}
+.decorated > span:before, .decorated > span:after{
+    content: '';
+    position: absolute;
+    top: 50%;
+    border-bottom: 4px solid;
+    width: 68px;
+    margin: 0 12px;
+}
+.decorated > span:before{
+    right: 100%;
+}
+.decorated > span:after{
+    left: 100%;
+}
+
+
 .issue-comment {
     margin-top: 19px;
     border: 1px solid lightgrey;
