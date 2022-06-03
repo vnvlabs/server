@@ -1,6 +1,5 @@
 #!/bin/bash
 
-service mongodb start
-
 cd /serve
+mongod -f /etc/mongodb.conf
 ./virt/bin/python src/run.py $1
