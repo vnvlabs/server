@@ -535,28 +535,29 @@ def register(socketio, apps, config):
         @socketio.on(f"{pty}-input", namespace=f"/{pty}")
         def pty_input(data):
             if a_check_valid_login():
-                if g.user.uid in socks[pty]:
-                    socks[pty][g.user.uid].to_docker_container(f"{pty}-input", data)
+                if request.sid in socks[pty]:
+                    socks[pty][request.sid].to_docker_container(f"{pty}-input", data)
 
         @socketio.on("resize", namespace=f"/{pty}")
         def pyresize(data):
             if a_check_valid_login():
-                if g.user.uid in socks[pty]:
-                    socks[pty][g.user.uid].to_docker_container(f"resize", data)
+                if request.sid in socks[pty]:
+                    socks[pty][request.sid].to_docker_container(f"resize", data)
 
         @socketio.on("connect", namespace=f"/{pty}")
         def pyconnect():
             if a_check_valid_login() :
                 try:
-                    socks[pty][g.user.uid] = SocketContainer(pty)
+                    socks[pty][request.sid] = SocketContainer(pty)
                 except Exception as e:
                     print(e)
 
         @socketio.on("disconnect", namespace=f"/{pty}")
         def pydisconnect():
             if a_check_valid_login():
-                if g.user.uid in socks[pty]:
-                    socks[pty].pop(g.user.uid)
+                if request.sid in socks[pty]:
+                    socks[pty].pop(request.sid)
+
 
     wrap("pty")
     wrap("pypty")
@@ -564,16 +565,16 @@ def register(socketio, apps, config):
     @socketio.on("connect", namespace=f"/services")
     def theiaconnect(**kwargs):
         if a_check_valid_login():
-            socks["theia"][g.user.uid] = SocketContainer("services", True)
+            socks["theia"][request.sid] = SocketContainer("services", True)
 
     @socketio.on('message', namespace="/services")
     def catch_message(data, **kwargs):
         if a_check_valid_login():
             if g.user.uid in socks["theia"]:
-                socks["theia"][g.user.uid].to_docker_container(f"message", data)
+                socks["theia"][request.sid].to_docker_container(f"message", data)
 
     @socketio.on('disconnect', namespace="/services")
     def abcatch_disconnect(**kwargs):
         if a_check_valid_login():
-            if g.user.uid in socks["theia"]:
-                socks["theia"].pop(g.user.uid)
+            if request.sid in socks["theia"]:
+                socks["theia"].pop(request.sid)

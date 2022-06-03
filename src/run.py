@@ -20,8 +20,8 @@ class Config:
     ALLOW_NEW_USERS = True
     AUTHORIZATION_CODES = ["Trial"]
     HOST = "0.0.0.0"
-    WSPATH = f"ws://{HOST}:{port}/ws"
-    HOSTCORS = f"http://localhost:{port}"
+    WSPATH = "ws://localhost:5001/ws"
+    HOSTCORS = "http://localhost:5001"
 
     MONGO_CONFIG = {"drop":False}
 
