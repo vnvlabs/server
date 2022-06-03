@@ -5,16 +5,30 @@
 
 {% block content %}
 
-<div style="position:absolute; top:20px; right:20px; ">
-    <button onclick="add_money();" class="btn btn-primary" style="margin-left:10px;">Fund Account</button>
-    <button onclick="refresh_containers()" class="btn btn-primary" style="margin-left:10px;">Refresh</button>
-    <button onclick="hard_logout();" class="btn btn-primary" style="margin-left:10px;">Logout from {{g.user.username}}</button>
+
+<div style="position:absolute; top:10px; right:20px; z-index:10; display:flex;">
+    <div title="New Container" onclick="$('#new_container_modal').modal('show');"><i class="feather icon-plus-circle"  style="margin-left:10px; color:white; font-size:30px; cursor:pointer;"></i></div>
+    <div title="Fund Account" onclick="add_money()"><i class="feather icon-shopping-cart"  style="margin-left:20px; color:white; font-size:30px; cursor:pointer;"></i></div>
+    <div title="Refresh" onclick="refresh_containers()"><i class="feather icon-refresh-cw"  style="margin-left:20px; color:white; font-size:30px; cursor:pointer;"></i></div>
+    <div title="Logout from {{g.user.username}}" onclick="hard_logout()"><i class="feather icon-log-out"  style="margin-left:20px; color:white; font-size:30px; cursor:pointer;"></i></div>
 </div>
 
-<div id="container-content" class="card" style="width:80vw; height:80vh; padding:50px;">
-    {%include "container_content.html" %}
+<div style="display:flex; height:calc(100vh - 40px); position:absolute; top:0; width:100vw; flex-direction:column; align-items:center; overflow:auto">
+
+<div class="thetitle" style="margin-bottom:20px;">
+   <div class="maintitle" style="">
+       VnVLabs.com
+   </div>
+   <div class="subtitle">
+      <div>Scientific Simulation as a Service</div>
+   </div>
 </div>
 
+<div id="container-content" style="padding:0px 20px; margin:50px 0px; display:flex; flex-direction:column; width:100%; max-width:1200px;">
+        {%include "container_content.html" %}
+</div>
+
+</div>
 
 
 <script>

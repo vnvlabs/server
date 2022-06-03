@@ -1,27 +1,26 @@
+<div style="width:100%; height:100%; flex:1 ">
 
-
-<img src="/flask_static/assets/images/logo-dark.png" alt="" class="img-fluid mb-4"
-     style="width: 400px; margin-left: auto;margin-right: auto;">
-
-<div id="containers" style="display: flex; flex-direction: column; height: 48%; margin-bottom: 20px;">
-    <div style="display:flex; justify-content:flex-end; margin-right:10px; font-size:15px; font-weight:900; align-items:center;" >Account Balance: $<span id="account_bal">{{balance/100}}</span></div>
+<div id="containers" style="display: flex; flex-direction: column; margin-bottom: 20px;">
+    <div style="display:flex; color:white; justify-content:flex-end; margin-right:10px; font-size:15px; font-weight:900; align-items:center;">
+        Account Balance: $<span id="account_bal">{{balance}}</span></div>
     <div class="card" style="padding:15px; flex:1; margin-top:5px; overflow:scroll;">
-
-        <div style="display: flex;align-items:center;">
+       <div style="display: flex;align-items:center;">
             <h2 style="flex:1"> Containers</h2>
-            <button onclick="$('#new_container_modal').modal('show');" style="margin-left:10px;" class="btn btn-primary">New Container</button>
         </div>
+         {%if containers | length == 0 %}
+            <div style="font-size:22px">You do not have any containers yet. Click the <i style="cursor:pointer" onclick="$('#new_container_modal').modal('show');" class="feather icon-plus-circle"></i> to get started!</div>
+        {%else%}
 
         <table class="table">
             <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Description</th>
-                    <th>Image</th>
-                    <th>Resource</th>
-                    <th>Status</th>
-                    <th></th>
-                </tr>
+            <tr>
+                <th>Name</th>
+                <th>Description</th>
+                <th>Image</th>
+                <th>Resource</th>
+                <th>Status</th>
+                <th></th>
+            </tr>
             </thead>
             <tbody>
             {%for container in containers %}
@@ -31,30 +30,35 @@
                 <td style="vertical-align:middle;">{{container.image}}</td>
                 <td style="vertical-align:middle;">{{container.resource.name}}</td>
                 {% if container.id == stopped_id %}
-                    <td style="vertical-align:middle;">stopping</td>
+                <td style="vertical-align:middle;">stopping</td>
                 {%else%}
-                    <td style="vertical-align:middle;">{{container.status()}}</td>
+                <td style="vertical-align:middle;">{{container.status()}}</td>
                 {%endif%}
                 <td>
-                  <div style="display:flex; justify-content:flex-end">
-                    {%if container.status() == "running" and container.id != stopped_id %}
-                        <button class="btn btn-primary" style="margin-left:10px;" onclick="connect_to_container('{{container.id}}')" >Connect</button>
-                        <button class="btn btn-primary" style="margin-left:10px;" onclick="stop_container('{{container.id}}')" >Stop</button>
-                    {%else%}
-                        <button class="btn btn-primary" style="margin-left:10px;" onclick="start_container('{{container.id}}')" >Start</button>
-                        <button class="btn btn-primary" style="margin-left:10px;" onclick="delete_container('{{container.id}}')" >Delete</button>
-                    {%endif%}
-                    <button class="btn btn-primary" style="margin-left:10px;" onclick="snapshot_container('{{container.id}}')" >Snapshot</button>
-                  </div>
+                    <div style="display:flex; justify-content:flex-end">
+                        {%if container.status() == "running" and container.id != stopped_id %}
+
+                        <div title="Login to Container" onclick="connect_to_container('{{container.id}}')"><i class="feather icon-cast"  style="font-size:25px; cursor:pointer;"></i></div>
+                        <div title="Stop the Container" onclick="stop_container('{{container.id}}')"><i class="feather icon-sunset"  style="margin-left:15px; font-size:25px; cursor:pointer;"></i></div>
+                        {%else%}
+                        <div title="Start the Container" onclick="start_container('{{container.id}}')"><i class="feather icon-sunrise"  style="margin-left:15px; font-size:25px; cursor:pointer;"></i></div>
+                        <div title="Delete the Container" onclick="delete_container('{{container.id}}')"><i class="feather icon-delete"  style="margin-left:15px; font-size:25px; cursor:pointer;"></i></div>
+                        {%endif%}
+                        <div title="Take a snapshot" onclick="snapshot_container('{{container.id}}')"><i class="feather icon-camera"  style="margin-left:15px; font-size:25px; cursor:pointer;"></i></div>
+
+                    </div>
                 </td>
             </tr>
             {%endfor%}
             </tbody>
         </table>
+        {%endif%}
     </div>
 </div>
 
-<div id="images" style="display: flex; flex-direction: column; height: 48%; margin-bottom: 20px;">
+{% if pimages | length > 0 %}
+
+<div id="images" style="display: flex; flex-direction: column; margin-bottom: 20px">
 
 
     <div class="card" style="padding:15px;flex:1; margin-top:5px; overflow:scroll;">
@@ -63,35 +67,38 @@
         </div>
         <table class="table">
             <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Image</th>
-                    <th>Description</th>
-                    <th></th>
-                </tr>
+            <tr>
+                <th>Name</th>
+                <th>Image</th>
+                <th>Description</th>
+                <th></th>
+            </tr>
             </thead>
             <tbody>
-            {%for container in images %}
-            {% if container.private %}
-            <tr >
+            {%for container in pimages %}
+            <tr>
                 <td style="vertical-align:middle;">{{container.name}}</td>
                 <td style="vertical-align:middle;">{{container.id}}</td>
                 <td style="vertical-align:middle;">{{container.description}}</td>
                 <td>
-                  <div style="display:flex; justify-content:flex-end">
-                      <button class="btn btn-primary" style="margin-left:10px;" onclick="delete_snapshot('{{container.id}}')">Delete</button>
-                  </div>
+                    <div style="display:flex; justify-content:flex-end">
+                        <div title="Delete the Container" onclick="delete_snapshot('{{container.id}}')"><i class="feather icon-delete"  style="margin-left:15px; font-size:25px; cursor:pointer;"></i></div>
+                    </div>
                 </td>
             </tr>
-            {%endif%}
             {%endfor%}
             </tbody>
         </table>
     </div>
 </div>
 
-{% if message is not none and message | length > 0  %}
+{% endif %}
+
+{% if message is not none and message | length > 0 %}
 <script>
     alert("{{message}}")
+
+
 </script>
 {% endif %}
+</div>

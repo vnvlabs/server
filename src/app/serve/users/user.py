@@ -77,3 +77,5 @@ class User:
     def has_image(self, image):
         return image in self.images
 
+    def balance_str(self):
+        return "{:.2f}".format(self.balance/100)

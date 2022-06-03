@@ -162,10 +162,13 @@ def createAccount():
 
 @blueprint.route('/containers', methods=["GET"])
 def container_management():
+    ims = list_available_images(g.user)
+    pims = [i for i in ims if i.private]
     return render_template("container.html",
-                           balance=g.user.balance,
+                           balance=g.user.balance_str(),
                            resources=list_available_resources(g.user),
-                           images=list_available_images(g.user),
+                           pimages=pims,
+                           images=ims,
                            containers=list_user_containers(g.user.uid),
                            message=None,
                            stopped_id=None
@@ -182,10 +185,14 @@ def list_available_images(user):
     return [ ALL_IMAGES[r] for r in user.images  ] + list_user_images(user.uid)
 
 def container_management_content(message=None, stopped_id=None):
+
+    ims = list_available_images(g.user)
+    pims = [i for i in ims if i.private]
     return render_template("container_content.html",
-                           balance=g.user.balance,
+                           balance=g.user.balance_str(),
                            resources=list_available_resources(g.user),
-                           images=list_available_images(g.user),
+                           images=ims,
+                           pimages=pims,
                            containers=list_user_containers(g.user.uid),
                            message=message,
                            stopped_id = stopped_id
